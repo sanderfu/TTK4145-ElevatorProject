@@ -104,25 +104,52 @@ Queue init send status ok to FSM
 
 If status not ok, reset.
 
-### Network module
+### Network manager
+The purpose of the network manager is to make packet loss and other errors regarding the network such as connection drop/loss invisible to the Order Manager.
+
+#### Initializer
+  * Initializes the functionality of the network manager.
+    * Trying to connect to network/localhost and requesting a soft system restart if this fails.
+    * Starting the transmitter
+    * Starting the Reciever
+
+#### Transmitter
+  * Transmitts all message types sent from order manager X times (to take package loss into account)
+  * Before transmitting to the network driver, the message is signed with sender IP
+
+#### Reciever
+  * Recieves all message types sent over the network.
+  * Triggers reinitialize of Network Manager (only) if the network reports any error with connecting/listening/sending
+  * Checks that recieved message is not a duplicate of earlier messages to ensure only unique messages are forwarded to the order manager under normal circumstances.
 
 #### Notes
 
 Technical Implementation:
-  * Topology: Mesh network
+  * Topology: Mesh network (Broadcasting)
   * All messages are broadcasted via UDP
-  * Must choose blocking or select
-  * Core reliability built into module
-  * Messages are structs and are packed/unpacked in the network module.
-  * Detection and handling of lost packages are dealt with in the network module
-  * Lost nodes are not handeled as messages are broadcasted
+  * We will use the select approach and channels for all data passing
+  * Core reliability must be handeled by Network manager, the underlaying driver does not handle this.
+  * Messages on channels in the network manager are structs, they are serialized by the network driver (tested, working ok)
 
 Guarantees about the elevator:
   * Other nodes do not care, the faulty node will try to reconnect and stay on 
 localhost in meantime (will be invisible for order manager)
 
 
+### Network driver
+The network driver is not made by us. Source code and driver documentation found at https://github.com/TTK4145/Network-go.
+
+#### Notes
+The notes are a collection of important observations from studying the driver documentation, source code and testing it.
+  *  Handles transmitting almost any custom data type and recieving them
+     *  Can transmit and recieve several custom types on the same port also.
+  *  Detects new peers and lost peers on the network automatically
+  *  Function for finding own IP address (when connected to the internet)
+  *  Does NOT handle packet loss at all.
+     * If a "peer-packet" is lost, it shows up as if that peer has been disconnected.
+     * Packages are not automatically resent, and no panic is caused by the packet loss. It will be up to the network module to handle the packet loss.
+
 ### Elevator driver
-Given in https://github.com/TTK4145/driver-go. 
+The elevator driver is not made by us. Source code and driver documentation found at https://github.com/TTK4145/driver-go. 
 
 
