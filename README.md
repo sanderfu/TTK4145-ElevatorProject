@@ -6,6 +6,7 @@ only a convenience, we will drop it
 * Orders are divided into HW and SW orders. HW orders are orders from the 
 physical elevator buttons. SW orders are commands to execute HW orders sent 
 between elevators
+* We might need error handler in every module.
 
 ## Modules
 
@@ -121,6 +122,9 @@ The purpose of the network manager is to make packet loss and other errors regar
   * Recieves all message types sent over the network.
   * Triggers reinitialize of Network Manager (only) if the network reports any error with connecting/listening/sending
   * Checks that recieved message is not a duplicate of earlier messages to ensure only unique messages are forwarded to the order manager under normal circumstances.
+
+#### Watchdog
+  * Check for network changes (loss of network primarily)
 
 #### Notes
 
