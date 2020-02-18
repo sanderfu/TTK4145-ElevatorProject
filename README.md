@@ -156,4 +156,6 @@ The notes are a collection of important observations from studying the driver do
 ### Elevator driver
 The elevator driver is not made by us. Source code and driver documentation found at https://github.com/TTK4145/driver-go. 
 
+### Repo Notes
+ * The structure of the repository is inspired by the golang-standards/project-layout https://github.com/golang-standards/project-layout
 
