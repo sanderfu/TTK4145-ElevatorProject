@@ -13,7 +13,9 @@ import (
 )
 
 const (
-	packetduplicates = 10
+	packetduplicates    = 10
+	maxuniquesignatures = 25
+	removeinclean       = int(maxuniquesignatures / 5)
 )
 
 var recentSignatures []string
@@ -102,7 +104,7 @@ func NetworkManager() {
 	go peers.Transmitter(15647, id, peerTxEnable)
 	go peers.Receiver(15647, peerUpdateCh)
 
-	// ... and start the transmitter/receiver pair on some port
+	// ... and start the transmitter/receiver pair o
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
 	go bcast.Receiver(16569, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
@@ -123,22 +125,30 @@ func checkDuplicate(signature string) bool {
 		}
 	}
 	recentSignatures = append(recentSignatures, signature)
+	if len(recentSignatures) > maxuniquesignatures {
+		cleanArray()
+	}
 	return false
+}
+
+func cleanArray() {
+
+	for i := 0; i < len(recentSignatures)-removeinclean; i++ {
+		recentSignatures[i] = recentSignatures[i+removeinclean]
+	}
+	recentSignatures = recentSignatures[:len(recentSignatures)-removeinclean]
 }
 
 //TestSignatures tests that the signature system works as intended
 func TestSignatures() {
-	sign1 := createSignature(0)
-	time.Sleep(1 * time.Second)
-	sign2 := createSignature(2)
-	if !checkDuplicate(sign1) {
-		fmt.Println(sign1, " was not already in list")
-	}
-	if !checkDuplicate(sign2) {
-		fmt.Println(sign2, " was not already in list")
-	}
-	if checkDuplicate(sign1) {
-		fmt.Println(sign1, "was already in the list")
+	for i := 0; i < maxuniquesignatures*2; i++ {
+		sign1 := createSignature(i)
+		checkDuplicate(sign1)
+		fmt.Println("")
+		fmt.Println("Recentsignatures:")
+		for j := 0; j < len(recentSignatures); j++ {
+			fmt.Println(recentSignatures[j])
+		}
 	}
 }
 
