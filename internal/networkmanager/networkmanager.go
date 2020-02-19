@@ -3,6 +3,7 @@ package networkmanager
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/TTK4145/Network-go/network/bcast"
@@ -11,36 +12,77 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
-// We define some custom struct to send over the network.
-// Note that all members we want to transmit must be public. Any private members
-//  will be received as zero-values.
-type HelloMsg struct {
-	Message string
-	Iter    int
-}
+const (
+	packetduplicates = 10
+)
 
-// We make channels for sending and receiving our custom data types
-//SW Order:
-var SWOrderTX chan datatypes.SW_Order = make(chan datatypes.SW_Order)
-var SWOrderRX chan datatypes.SW_Order = make(chan datatypes.SW_Order)
+var recentSignatures []string
 
-//Cost request:
-var CostRequestTX chan datatypes.Cost_request = make(chan datatypes.Cost_request)
-var CostRequestRX chan datatypes.Cost_request = make(chan datatypes.Cost_request)
+//SWOrderTX for transmitting to network via driver
+var SWOrderTX chan datatypes.SWOrder = make(chan datatypes.SWOrder)
 
-//Cost answer:
-var CostAnswerTX chan datatypes.Cost_answer = make(chan datatypes.Cost_answer)
-var CostAnswerRX chan datatypes.Cost_answer = make(chan datatypes.Cost_answer)
+//SWOrderRX for recieveing from network via driver
+var SWOrderRX chan datatypes.SWOrder = make(chan datatypes.SWOrder)
 
-//Order_recv_ack:
-var OrderRecvAckTX chan datatypes.Order_recv_ack = make(chan datatypes.Order_recv_ack)
-var OrderRecvAckRX chan datatypes.Order_recv_ack = make(chan datatypes.Order_recv_ack)
+//CostRequestTX for transmitting to network via driver
+var CostRequestTX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
 
-//Order complete:
-var OrderCompleteTX chan datatypes.Order_complete = make(chan datatypes.Order_complete)
-var OrderCompleteRX chan datatypes.Order_complete = make(chan datatypes.Order_complete)
+//CostRequestRX for recieveing from network via driver
+var CostRequestRX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
 
+//CostAnswerTX for transmitting to network via driver
+var CostAnswerTX chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
+
+//CostAnswerRX for recieveing from network via driver
+var CostAnswerRX chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
+
+//OrderRecvAckTX ...
+var OrderRecvAckTX chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
+
+//OrderRecvAckRX ...
+var OrderRecvAckRX chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
+
+//OrderCompleteTX ...
+var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
+//OrderCompleteRX ...
+var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
+//SWOrderTOM channel from Network Manager to Order Manager
+var SWOrderTOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+
+//SWOrderFOM channel from Order Manager to Network Manager
+var SWOrderFOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+
+//CostRequestTOM ...
+var CostRequestTOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
+
+//CostRequestFOM ...
+var CostRequestFOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
+
+//CostAnswerTOM ...
+var CostAnswerTOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
+
+//CostAnswerFOM ...
+var CostAnswerFOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
+
+//OrderRecvAckTOM ...
+var OrderRecvAckTOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
+
+//OrderRecvAckFOM ...
+var OrderRecvAckFOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
+
+//OrderCompleteTOM ...
+var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
+//OrderCompleteFOM ...
+var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
+//NetworkManager to start networkmanager routine.
 func NetworkManager() {
+	//Create an empty recentSignatures array
+	recentSignatures = make([]string, 0)
+
 	//Defining NetworkManager id based on IP and process ID
 	var id string
 
@@ -60,46 +102,98 @@ func NetworkManager() {
 	go peers.Transmitter(15647, id, peerTxEnable)
 	go peers.Receiver(15647, peerUpdateCh)
 
-	helloTx := make(chan HelloMsg)
-	helloRx := make(chan HelloMsg)
 	// ... and start the transmitter/receiver pair on some port
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Transmitter(16569, helloTx, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
-	go bcast.Receiver(16569, helloRx, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
-
-	/*
-		// The example message. We just send one of these every second.
-		go func() {
-			helloMsg := HelloMsg{"Hello from " + id, 0}
-			for {
-				helloMsg.Iter++
-				helloTx <- helloMsg
-				time.Sleep(1 * time.Second)
-			}
-		}()
-
-		fmt.Println("Started")
-		for {
-			select {
-			case p := <-peerUpdateCh:
-				fmt.Printf("Peer update:\n")
-				fmt.Printf("  Peers:    %q\n", p.Peers)
-				fmt.Printf("  New:      %q\n", p.New)
-				fmt.Printf("  Lost:     %q\n", p.Lost)
-
-			case a := <-helloRx:
-				fmt.Printf("Received: %#v\n", a)
-			}
-		}
-	*/
+	go bcast.Receiver(16569, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
+	transmitter(16569)
 }
 
+func createSignature(structType int) string {
+	t := time.Now()
+	timeStr := t.Format("20060102150405")
+	senderIPStr, _ := localip.LocalIP()
+	return senderIPStr + "@" + timeStr + ":" + strconv.Itoa(structType)
+}
+
+func checkDuplicate(signature string) bool {
+	for i := 0; i < len(recentSignatures); i++ {
+		if recentSignatures[i] == signature {
+			return true
+		}
+	}
+	recentSignatures = append(recentSignatures, signature)
+	return false
+}
+
+//TestSignatures tests that the signature system works as intended
+func TestSignatures() {
+	sign1 := createSignature(0)
+	time.Sleep(1 * time.Second)
+	sign2 := createSignature(2)
+	if !checkDuplicate(sign1) {
+		fmt.Println(sign1, " was not already in list")
+	}
+	if !checkDuplicate(sign2) {
+		fmt.Println(sign2, " was not already in list")
+	}
+	if checkDuplicate(sign1) {
+		fmt.Println(sign1, "was already in the list")
+	}
+}
+
+//transmitter Function for applying packet redundancy before transmitting over network.
+func transmitter(port int) {
+	go bcast.Transmitter(16569, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
+	for {
+		select {
+		case order := <-SWOrderFOM:
+			order.Signature = createSignature(0)
+			for i := 0; i < packetduplicates; i++ {
+				SWOrderTX <- order
+			}
+		case costReq := <-CostRequestFOM:
+			costReq.Signature = createSignature(1)
+			for i := 0; i < packetduplicates; i++ {
+				CostRequestTX <- costReq
+			}
+		case costAns := <-CostAnswerFOM:
+			costAns.Signature = createSignature(2)
+			for i := 0; i < packetduplicates; i++ {
+				CostAnswerTX <- costAns
+			}
+		case orderRecvAck := <-OrderRecvAckFOM:
+			orderRecvAck.Signature = createSignature(3)
+			for i := 0; i < packetduplicates; i++ {
+				OrderRecvAckTX <- orderRecvAck
+			}
+		case orderComplete := <-OrderCompleteFOM:
+			orderComplete.Signature = createSignature(4)
+			for i := 0; i < packetduplicates; i++ {
+				OrderCompleteTX <- orderComplete
+			}
+		}
+	}
+}
+
+/*
+func receiver(port int) {
+	go bcast.Receiver(16569, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
+	for {
+		select {
+		case order := <-SWOrderRX:
+
+		}
+	}
+}
+*/
+
+//TestSending Function to test basic order transmission over network
 func TestSending() {
 	for {
-		var testOrdre datatypes.SW_Order
-		testOrdre.Primary_id = "12345"
-		testOrdre.Backup_id = "67890"
+		var testOrdre datatypes.SWOrder
+		testOrdre.PrimaryID = "12345"
+		testOrdre.BackupID = "67890"
 		testOrdre.Dir = datatypes.INSIDE
 		testOrdre.Floor = datatypes.SECOND
 		SWOrderTX <- testOrdre
@@ -107,6 +201,7 @@ func TestSending() {
 	}
 }
 
+//TestRecieving Function to test basic order transmission over network
 func TestRecieving() {
 	for {
 		select {
@@ -116,3 +211,37 @@ func TestRecieving() {
 		}
 	}
 }
+
+/*
+//TestSendingBuffered Function to test need for buffered RX channels
+func TestSendingBuffered() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Hit enter to start sending 10 SW orders")
+	text, _ := reader.ReadString('\n')
+	fmt.Println(text)
+	for i := 0; i < 10; i++ {
+		fmt.Printf("Sending hardware order %v\n", i)
+		var testOrdre datatypes.SWOrder
+		testOrdre.Primary_id = "12345"
+		testOrdre.Backup_id = "67890"
+		testOrdre.Dir = datatypes.INSIDE
+		testOrdre.Floor = datatypes.SECOND
+		SWOrderTX <- testOrdre
+		time.Sleep(1 * time.Second)
+	}
+}
+
+/7testRecieveingBuffered Function to test need for buffered RX channels
+func TestRecievingBuffered() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Hit enter to start processing orders on SWOrderRX channel")
+	text, _ := reader.ReadString('\n')
+	fmt.Println(text)
+	for {
+		select {
+		case order := <-SWOrderRX:
+			fmt.Printf("Received: %#v\n", order)
+		}
+	}
+}
+*/
