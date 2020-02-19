@@ -1,0 +1,6 @@
+[submodule "vendors/github.com/TTK4145/driver-go"]
+	path = vendors/github.com/TTK4145/driver-go
+	url = https://github.com/TTK4145/driver-go.git
+[submodule "vendors/github.com/TTK4145/Network-go"]
+	path = vendors/github.com/TTK4145/Network-go
+	url = git@github.com:TTK4145/Network-go.git
