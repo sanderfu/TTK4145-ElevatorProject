@@ -5,6 +5,7 @@ package datatypes
 //Basic types
 type Floor int
 type Direction int
+type StructType int
 
 const (
 	FIRST  Floor = 0
@@ -19,35 +20,42 @@ const (
 	INSIDE Direction = 0
 )
 
+const ()
+
 //Struct types
 // Note that all members we want to transmit must be public. Any private members
 //  will be received as zero-values over the network.
 
-type Cost_request struct {
-	Source_id string
+type CostRequest struct {
+	Signature string
+	SourceID  string
 	Floor     Floor
 	Direction Direction
 }
 
-type Cost_answer struct {
-	Source_id  string
-	Cost_value float64
+type CostAnswer struct {
+	Signature string
+	SourceID  string
+	CostValue float64
 }
 
-type SW_Order struct {
-	Primary_id string
-	Backup_id  string
-	Floor      Floor
-	Dir        Direction
-}
-
-type Order_recv_ack struct {
-	Source_id string
+type SWOrder struct {
+	Signature string
+	PrimaryID string
+	BackupID  string
 	Floor     Floor
 	Dir       Direction
 }
 
-type Order_complete struct {
-	Floor Floor
-	Dir   Direction
+type OrderRecvAck struct {
+	Signature string
+	SourceID  string
+	Floor     Floor
+	Dir       Direction
+}
+
+type OrderComplete struct {
+	Signature string
+	Floor     Floor
+	Dir       Direction
 }
