@@ -7,12 +7,16 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
+
 	"github.com/TTK4145/Network-go/network/conn"
 )
 
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts
 // it on `port`
-func Transmitter(port int, chans ...interface{}) {
+func Transmitter(port int, mode datatypes.NWMMode, chans ...interface{}) {
+	fmt.Println("Driver TX Starting")
 	checkArgs(chans...)
 
 	n := 0
@@ -32,34 +36,52 @@ func Transmitter(port int, chans ...interface{}) {
 
 	conn := conn.DialBroadcastUDP(port)
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
+
+	if mode == datatypes.Localhost {
+		fmt.Println("Driver TX in localhost mode")
+		addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("127.255.255.255:%d", port))
+	}
 	for {
-		chosen, value, _ := reflect.Select(selectCases)
-		buf, _ := json.Marshal(value.Interface())
-		conn.WriteTo([]byte(typeNames[chosen]+string(buf)), addr)
+		select {
+		case <-channels.KillDriverTX:
+			fmt.Println("Driver TX Killed")
+			return
+		default:
+			chosen, value, _ := reflect.Select(selectCases)
+			buf, _ := json.Marshal(value.Interface())
+			conn.WriteTo([]byte(typeNames[chosen]+string(buf)), addr)
+		}
 	}
 }
 
 // Matches type-tagged JSON received on `port` to element types of `chans`, then
 // sends the decoded value on the corresponding channel
 func Receiver(port int, chans ...interface{}) {
+	fmt.Println("Driver RX Starting")
 	checkArgs(chans...)
 
 	var buf [1024]byte
 	conn := conn.DialBroadcastUDP(port)
 	for {
-		n, _, _ := conn.ReadFrom(buf[0:])
-		for _, ch := range chans {
-			T := reflect.TypeOf(ch).Elem()
-			typeName := T.String()
-			if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
-				v := reflect.New(T)
-				json.Unmarshal(buf[len(typeName):n], v.Interface())
+		select {
+		case <-channels.KillDriverRX:
+			fmt.Println("Driver RX Killed")
+			return
+		default:
+			n, _, _ := conn.ReadFrom(buf[0:])
+			for _, ch := range chans {
+				T := reflect.TypeOf(ch).Elem()
+				typeName := T.String()
+				if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
+					v := reflect.New(T)
+					json.Unmarshal(buf[len(typeName):n], v.Interface())
 
-				reflect.Select([]reflect.SelectCase{{
-					Dir:  reflect.SelectSend,
-					Chan: reflect.ValueOf(ch),
-					Send: reflect.Indirect(v),
-				}})
+					reflect.Select([]reflect.SelectCase{{
+						Dir:  reflect.SelectSend,
+						Chan: reflect.ValueOf(ch),
+						Send: reflect.Indirect(v),
+					}})
+				}
 			}
 		}
 	}
