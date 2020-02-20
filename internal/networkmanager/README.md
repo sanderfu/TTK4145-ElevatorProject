@@ -16,7 +16,8 @@
     * PASSED
  * Implement checking such that only unique packets are sent on channels to Order Manager - DONE
  * Create test for packet uniqueness - DONE
-    * Passed
+    * PASSED
     * Comment: Same test as above
  * Modify signature to be able to send more than one order every second - DONE
- * Verify that everything still working 
+ * Verify that everything still working
+    * PASSED
