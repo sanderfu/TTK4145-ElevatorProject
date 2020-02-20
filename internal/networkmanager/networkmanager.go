@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"time"
 
@@ -61,7 +62,7 @@ func NetworkManager() {
 
 func networkWatch() {
 	for {
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		theIP, err := localip.LocalIP()
 		if err != nil {
 			if mode != datatypes.Localhost {
@@ -128,7 +129,6 @@ func printRecentSignatures() {
 
 //transmitter Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
-	fmt.Println("Starting Transmitter")
 	go bcast.Transmitter(port, mode, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
 	for {
 		select {
@@ -159,7 +159,7 @@ func transmitter(port int) {
 			}
 		case <-killTransmitter:
 			KillDriverTX <- struct{}{}
-			time.Sleep(1 * time.Second)
+			time.Sleep(1000 * time.Millisecond)
 			initTransmitter <- struct{}{}
 			return
 		}
@@ -167,7 +167,6 @@ func transmitter(port int) {
 }
 
 func receiver(port int) {
-	fmt.Println("Starting Receiver")
 	go bcast.Receiver(port, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
 	for {
 		select {
@@ -193,7 +192,7 @@ func receiver(port int) {
 			}
 		case <-killReceiver:
 			KillDriverRX <- struct{}{}
-			time.Sleep(1 * time.Second)
+			time.Sleep(1000 * time.Millisecond)
 			initReceiver <- struct{}{}
 			return
 		}
@@ -257,6 +256,23 @@ func TestRecievingBuffered() {
 	}
 }
 
+func internetOn(on bool) {
+	var command string
+	if on {
+		command = "sudo ifconfig enp4s0 up"
+	} else {
+		command = "sudo ifconfig enp4s0 down"
+	}
+	out, err := exec.Command("/bin/bash", "-c", command).Output()
+	if err != nil {
+		fmt.Printf("%s", err)
+	}
+	fmt.Println("Command Successfully Executed")
+	output := string(out[:])
+	fmt.Println(output)
+
+}
+
 //TestSendingRedundant Function to test transmitting redundancy measures to packet loss.
 func TestSendingRedundant(ordersToSend int) {
 	//Create dummy order from order manager
@@ -273,6 +289,9 @@ func TestSendingRedundant(ordersToSend int) {
 		testOrdre.Floor = datatypes.SECOND
 		SWOrderFOM <- testOrdre
 		time.Sleep(1 * time.Second)
+		if i == 5 {
+			go internetOn(false)
+		}
 	}
 
 	for i := 0; i < ordersToSend; i++ {
@@ -285,6 +304,9 @@ func TestSendingRedundant(ordersToSend int) {
 		testOrdre.Floor = datatypes.SECOND
 		SWOrderTX <- testOrdre
 		time.Sleep(1 * time.Second)
+		if i == 0 {
+			go internetOn(true)
+		}
 	}
 
 }
