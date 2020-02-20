@@ -25,5 +25,5 @@
     * It is not detected, with base functionality of the driver everythign just stops working until network is back
  * Modify bcast package to allow for localhost broadcasting - DONE 
  * Implement checking for network connection loss and handle (restart Network Manager silently in localhost mode)
- * Implement reconnect functionality for localhost mode
+    * WORK IN PROGRESS, current state NOT WORKING
  * Test network connection loss handling
