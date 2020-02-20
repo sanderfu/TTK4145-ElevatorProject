@@ -12,7 +12,11 @@
  * Create test for unique signature functionality - DONE
     * PASSED
  * Implement redundancy in packets sent to combat packet loss with unique packet signature and multiple packet duplicates - DONE
- * Create test for packet loss transmission (comparing with nonredundant packets)
+ * Create test for packet loss transmission (comparing with nonredundant packets) - DONE
     * PASSED
- * Implement checking such that only unique packets are sent on channels to Order Manager
- * Create test for packet uniqueness
+ * Implement checking such that only unique packets are sent on channels to Order Manager - DONE
+ * Create test for packet uniqueness - DONE
+    * Passed
+    * Comment: Same test as above
+ * Modify signature to be able to send more than one order every second - DONE
+ * Verify that everything still working 

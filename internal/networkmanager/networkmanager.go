@@ -81,8 +81,13 @@ var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderCom
 //OrderCompleteFOM ...
 var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
+var start time.Time
+
 //NetworkManager to start networkmanager routine.
 func NetworkManager() {
+
+	start = time.Now()
+
 	//Create an empty recentSignatures array
 	recentSignatures = make([]string, 0)
 
@@ -113,10 +118,10 @@ func NetworkManager() {
 }
 
 func createSignature(structType int) string {
-	t := time.Now()
-	timeStr := t.Format("20060102150405")
+	timeSinceStart := time.Since(start)
+	t := strconv.FormatInt(timeSinceStart.Milliseconds(), 10)
 	senderIPStr, _ := localip.LocalIP()
-	return senderIPStr + "@" + timeStr + ":" + strconv.Itoa(structType)
+	return senderIPStr + "@" + t + ":" + strconv.Itoa(structType)
 }
 
 func checkDuplicate(signature string) bool {
