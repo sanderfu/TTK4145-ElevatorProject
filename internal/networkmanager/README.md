@@ -21,3 +21,9 @@
  * Modify signature to be able to send more than one order every second - DONE
  * Verify that everything still working
     * PASSED
+ * Test how the manager reacts to network loss - DONE
+    * It is not detected, with base functionality of the driver everythign just stops working until network is back
+ * Modify bcast package to allow for localhost broadcasting - DONE 
+ * Implement checking for network connection loss and handle (restart Network Manager silently in localhost mode)
+ * Implement reconnect functionality for localhost mode
+ * Test network connection loss handling

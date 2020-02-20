@@ -9,7 +9,7 @@ import (
 
 	"github.com/TTK4145/Network-go/network/bcast"
 	"github.com/TTK4145/Network-go/network/localip"
-	"github.com/TTK4145/Network-go/network/peers"
+	. "github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
@@ -21,106 +21,70 @@ const (
 
 var recentSignatures []string
 
-//SWOrderTX for transmitting to network via driver
-var SWOrderTX chan datatypes.SWOrder = make(chan datatypes.SWOrder)
-
-//SWOrderRX for recieveing from network via driver
-var SWOrderRX chan datatypes.SWOrder = make(chan datatypes.SWOrder)
-
-//CostRequestTX for transmitting to network via driver
-var CostRequestTX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
-
-//CostRequestRX for recieveing from network via driver
-var CostRequestRX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
-
-//CostAnswerTX for transmitting to network via driver
-var CostAnswerTX chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//CostAnswerRX for recieveing from network via driver
-var CostAnswerRX chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//OrderRecvAckTX ...
-var OrderRecvAckTX chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderRecvAckRX ...
-var OrderRecvAckRX chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderCompleteTX ...
-var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
-
-//OrderCompleteRX ...
-var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
-
-//SWOrderTOM channel from Network Manager to Order Manager
-var SWOrderTOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
-
-//SWOrderFOM channel from Order Manager to Network Manager
-var SWOrderFOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
-
-//CostRequestTOM ...
-var CostRequestTOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
-
-//CostRequestFOM ...
-var CostRequestFOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
-
-//CostAnswerTOM ...
-var CostAnswerTOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//CostAnswerFOM ...
-var CostAnswerFOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//OrderRecvAckTOM ...
-var OrderRecvAckTOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderRecvAckFOM ...
-var OrderRecvAckFOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderCompleteTOM ...
-var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
-
-//OrderCompleteFOM ...
-var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+var ip string
 
 var start time.Time
 
+var mode datatypes.NWMMode
+
+//For some reason needs 1 in these struct{} channels to make it work
+var killTransmitter = make(chan struct{}, 1)
+var killReceiver = make(chan struct{}, 1)
+
+var initTransmitter = make(chan struct{}, 1)
+var initReceiver = make(chan struct{}, 1)
+
 //NetworkManager to start networkmanager routine.
 func NetworkManager() {
-
+	//Start timer used for signatures
 	start = time.Now()
 
-	//Create an empty recentSignatures array
+	//Start networkWatch to detect connection loss (and switch to localhost)
+	go networkWatch()
+
+	//Initialize everything that need initializing
 	recentSignatures = make([]string, 0)
+	initTransmitter <- struct{}{}
+	initReceiver <- struct{}{}
+	mode = datatypes.Network
+	ip, _ = localip.LocalIP()
 
-	//Defining NetworkManager id based on IP and process ID
-	var id string
-
-	localIP, err := localip.LocalIP()
-	if err != nil {
-		fmt.Println(err)
-		localIP = "DISCONNECTED"
+	for {
+		select {
+		case <-initTransmitter:
+			go transmitter(16569)
+		case <-initReceiver:
+			go receiver(16569)
+		}
 	}
-	id = fmt.Sprintf("peer-%s-%d", localIP, os.Getpid())
+}
 
-	// We make a channel for receiving updates on the id's of the peers that are
-	//  alive on the network
-	peerUpdateCh := make(chan peers.PeerUpdate)
-	// We can disable/enable the transmitter after it has been started.
-	// This could be used to signal that we are somehow "unavailable".
-	peerTxEnable := make(chan bool)
-	go peers.Transmitter(70000, id, peerTxEnable)
-	go peers.Receiver(70000, peerUpdateCh)
-
-	// ... and start the transmitter/receiver pair o
-	// These functions can take any number of channels! It is also possible to
-	//  start multiple transmitters/receivers on the same port.
-	go transmitter(16569)
-	go receiver(16569)
+func networkWatch() {
+	for {
+		time.Sleep(1 * time.Second)
+		theIP, err := localip.LocalIP()
+		if err != nil {
+			if mode != datatypes.Localhost {
+				ip = "LOCALHOST"
+				mode = datatypes.Localhost
+				killTransmitter <- struct{}{}
+				killReceiver <- struct{}{}
+			}
+		} else {
+			if mode != datatypes.Network {
+				ip = theIP
+				mode = datatypes.Network
+				killTransmitter <- struct{}{}
+				killReceiver <- struct{}{}
+			}
+		}
+	}
 }
 
 func createSignature(structType int) string {
 	timeSinceStart := time.Since(start)
 	t := strconv.FormatInt(timeSinceStart.Nanoseconds()/1e6, 10)
-	senderIPStr, _ := localip.LocalIP()
+	senderIPStr := ip
 	return senderIPStr + "@" + t + ":" + strconv.Itoa(structType)
 }
 
@@ -164,7 +128,8 @@ func printRecentSignatures() {
 
 //transmitter Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
-	go bcast.Transmitter(port, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
+	fmt.Println("Starting Transmitter")
+	go bcast.Transmitter(port, mode, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
 	for {
 		select {
 		case order := <-SWOrderFOM:
@@ -192,11 +157,17 @@ func transmitter(port int) {
 			for i := 0; i < packetduplicates; i++ {
 				OrderCompleteTX <- orderComplete
 			}
+		case <-killTransmitter:
+			KillDriverTX <- struct{}{}
+			time.Sleep(1 * time.Second)
+			initTransmitter <- struct{}{}
+			return
 		}
 	}
 }
 
 func receiver(port int) {
+	fmt.Println("Starting Receiver")
 	go bcast.Receiver(port, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
 	for {
 		select {
@@ -220,6 +191,11 @@ func receiver(port int) {
 			if !checkDuplicate(orderComplete.Signature) {
 				OrderCompleteTOM <- orderComplete
 			}
+		case <-killReceiver:
+			KillDriverRX <- struct{}{}
+			time.Sleep(1 * time.Second)
+			initReceiver <- struct{}{}
+			return
 		}
 	}
 }
@@ -289,7 +265,7 @@ func TestSendingRedundant(ordersToSend int) {
 	text, _ := reader.ReadString('\n')
 	fmt.Println(text)
 	for i := 0; i < ordersToSend; i++ {
-		//fmt.Printf("Sending order %v\n", i)
+		fmt.Printf("Sending order %v\n", i)
 		var testOrdre datatypes.SWOrder
 		testOrdre.PrimaryID = "RedundantPackage"
 		testOrdre.BackupID = strconv.Itoa(i)
@@ -300,7 +276,7 @@ func TestSendingRedundant(ordersToSend int) {
 	}
 
 	for i := 0; i < ordersToSend; i++ {
-		//fmt.Printf("Sending order %v\n", i)
+		fmt.Printf("Sending order %v\n", i)
 		var testOrdre datatypes.SWOrder
 		testOrdre.Signature = createSignature(0)
 		testOrdre.PrimaryID = "NonRedundantPackage"

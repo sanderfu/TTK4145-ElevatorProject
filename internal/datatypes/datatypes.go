@@ -59,3 +59,10 @@ type OrderComplete struct {
 	Floor     Floor
 	Dir       Direction
 }
+
+type NWMMode int
+
+const (
+	Network   NWMMode = 0
+	Localhost NWMMode = 1
+)
