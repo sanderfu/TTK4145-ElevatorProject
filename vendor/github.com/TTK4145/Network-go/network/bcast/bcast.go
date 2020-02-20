@@ -16,7 +16,6 @@ import (
 // Encodes received values from `chans` into type-tagged JSON, then broadcasts
 // it on `port`
 func Transmitter(port int, mode datatypes.NWMMode, chans ...interface{}) {
-	fmt.Println("Driver TX Starting")
 	checkArgs(chans...)
 
 	n := 0
@@ -38,13 +37,11 @@ func Transmitter(port int, mode datatypes.NWMMode, chans ...interface{}) {
 	addr, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf("255.255.255.255:%d", port))
 
 	if mode == datatypes.Localhost {
-		fmt.Println("Driver TX in localhost mode")
 		addr, _ = net.ResolveUDPAddr("udp4", fmt.Sprintf("127.255.255.255:%d", port))
 	}
 	for {
 		select {
 		case <-channels.KillDriverTX:
-			fmt.Println("Driver TX Killed")
 			return
 		default:
 			chosen, value, _ := reflect.Select(selectCases)
@@ -57,7 +54,6 @@ func Transmitter(port int, mode datatypes.NWMMode, chans ...interface{}) {
 // Matches type-tagged JSON received on `port` to element types of `chans`, then
 // sends the decoded value on the corresponding channel
 func Receiver(port int, chans ...interface{}) {
-	fmt.Println("Driver RX Starting")
 	checkArgs(chans...)
 
 	var buf [1024]byte
@@ -65,7 +61,6 @@ func Receiver(port int, chans ...interface{}) {
 	for {
 		select {
 		case <-channels.KillDriverRX:
-			fmt.Println("Driver RX Killed")
 			return
 		default:
 			n, _, _ := conn.ReadFrom(buf[0:])
