@@ -119,7 +119,7 @@ func NetworkManager() {
 
 func createSignature(structType int) string {
 	timeSinceStart := time.Since(start)
-	t := strconv.FormatInt(timeSinceStart.Milliseconds(), 10)
+	t := strconv.FormatInt(timeSinceStart.Nanoseconds()/1e6, 10)
 	senderIPStr, _ := localip.LocalIP()
 	return senderIPStr + "@" + t + ":" + strconv.Itoa(structType)
 }
