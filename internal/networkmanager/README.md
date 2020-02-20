@@ -11,7 +11,7 @@
  * Implement functionality for generating unique packet signature and maintaining list of recent signatures - DONE
  * Create test for unique signature functionality - DONE
     * PASSED
- * Implement redundancy in packets sent to combat packet loss with unique packet signature and multiple packet duplicates
+ * Implement redundancy in packets sent to combat packet loss with unique packet signature and multiple packet duplicates - DONE
  * Create test for packet loss transmission
  * Implement checking such that only unique packets are sent on channels to Order Manager
  * Create test for packet uniqueness

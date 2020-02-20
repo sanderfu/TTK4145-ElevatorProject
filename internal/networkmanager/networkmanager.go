@@ -1,6 +1,7 @@
 package networkmanager
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strconv"
@@ -101,14 +102,14 @@ func NetworkManager() {
 	// We can disable/enable the transmitter after it has been started.
 	// This could be used to signal that we are somehow "unavailable".
 	peerTxEnable := make(chan bool)
-	go peers.Transmitter(15647, id, peerTxEnable)
-	go peers.Receiver(15647, peerUpdateCh)
+	go peers.Transmitter(70000, id, peerTxEnable)
+	go peers.Receiver(70000, peerUpdateCh)
 
 	// ... and start the transmitter/receiver pair o
 	// These functions can take any number of channels! It is also possible to
 	//  start multiple transmitters/receivers on the same port.
-	go bcast.Receiver(16569, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
-	transmitter(16569)
+	go transmitter(16569)
+	go receiver(16569)
 }
 
 func createSignature(structType int) string {
@@ -144,17 +145,21 @@ func TestSignatures() {
 	for i := 0; i < maxuniquesignatures*2; i++ {
 		sign1 := createSignature(i)
 		checkDuplicate(sign1)
-		fmt.Println("")
-		fmt.Println("Recentsignatures:")
-		for j := 0; j < len(recentSignatures); j++ {
-			fmt.Println(recentSignatures[j])
-		}
+		printRecentSignatures()
+	}
+}
+
+func printRecentSignatures() {
+	fmt.Println("")
+	fmt.Println("Recentsignatures:")
+	for j := 0; j < len(recentSignatures); j++ {
+		fmt.Println(recentSignatures[j])
 	}
 }
 
 //transmitter Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
-	go bcast.Transmitter(16569, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
+	go bcast.Transmitter(port, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
 	for {
 		select {
 		case order := <-SWOrderFOM:
@@ -186,17 +191,33 @@ func transmitter(port int) {
 	}
 }
 
-/*
 func receiver(port int) {
-	go bcast.Receiver(16569, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
+	go bcast.Receiver(port, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
 	for {
 		select {
 		case order := <-SWOrderRX:
-
+			if !checkDuplicate(order.Signature) {
+				SWOrderTOM <- order
+			}
+		case costReq := <-CostRequestRX:
+			if !checkDuplicate(costReq.Signature) {
+				CostRequestTOM <- costReq
+			}
+		case costAns := <-CostAnswerRX:
+			if !checkDuplicate(costAns.Signature) {
+				CostAnswerTOM <- costAns
+			}
+		case orderRecvAck := <-OrderRecvAckRX:
+			if !checkDuplicate(orderRecvAck.Signature) {
+				OrderRecvAckTOM <- orderRecvAck
+			}
+		case orderComplete := <-OrderCompleteRX:
+			if !checkDuplicate(orderComplete.Signature) {
+				OrderCompleteTOM <- orderComplete
+			}
 		}
 	}
 }
-*/
 
 //TestSending Function to test basic order transmission over network
 func TestSending() {
@@ -222,7 +243,6 @@ func TestRecieving() {
 	}
 }
 
-/*
 //TestSendingBuffered Function to test need for buffered RX channels
 func TestSendingBuffered() {
 	reader := bufio.NewReader(os.Stdin)
@@ -230,10 +250,10 @@ func TestSendingBuffered() {
 	text, _ := reader.ReadString('\n')
 	fmt.Println(text)
 	for i := 0; i < 10; i++ {
-		fmt.Printf("Sending hardware order %v\n", i)
+		fmt.Printf("Sending order %v\n", i)
 		var testOrdre datatypes.SWOrder
-		testOrdre.Primary_id = "12345"
-		testOrdre.Backup_id = "67890"
+		testOrdre.PrimaryID = "12345"
+		testOrdre.BackupID = "67890"
 		testOrdre.Dir = datatypes.INSIDE
 		testOrdre.Floor = datatypes.SECOND
 		SWOrderTX <- testOrdre
@@ -241,7 +261,7 @@ func TestSendingBuffered() {
 	}
 }
 
-/7testRecieveingBuffered Function to test need for buffered RX channels
+//TestRecievingBuffered Function to test need for buffered RX channels
 func TestRecievingBuffered() {
 	reader := bufio.NewReader(os.Stdin)
 	fmt.Println("Hit enter to start processing orders on SWOrderRX channel")
@@ -251,7 +271,37 @@ func TestRecievingBuffered() {
 		select {
 		case order := <-SWOrderRX:
 			fmt.Printf("Received: %#v\n", order)
+			printRecentSignatures()
 		}
 	}
 }
-*/
+
+//TestSendingRedundant Function to test transmitting redundancy measures to packet loss.
+func TestSendingRedundant() {
+	//Create dummy order from order manager
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Println("Hit enter to start sending 10 SW from 'Order Manager'")
+	text, _ := reader.ReadString('\n')
+	fmt.Println(text)
+	for i := 0; i < 10; i++ {
+		//fmt.Printf("Sending order %v\n", i)
+		var testOrdre datatypes.SWOrder
+		testOrdre.PrimaryID = "12345"
+		testOrdre.BackupID = "67890"
+		testOrdre.Dir = datatypes.INSIDE
+		testOrdre.Floor = datatypes.SECOND
+		SWOrderFOM <- testOrdre
+		time.Sleep(1 * time.Second)
+	}
+}
+
+//TestReceivingRedundant Function to test that order manager gets unique packages only
+func TestReceivingRedundant() {
+	for {
+		select {
+		case order := <-SWOrderTOM:
+			fmt.Printf("Received: %#v\n", order)
+			printRecentSignatures()
+		}
+	}
+}
