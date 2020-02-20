@@ -316,7 +316,9 @@ func TestReceivingRedundant() {
 	fmt.Println(text)
 	countRedundant := 0
 	countNonRedundant := 0
-	for start := time.Now(); time.Since(start) < 20*time.Second; {
+	done := time.After(25 * time.Second)
+readLoop:
+	for {
 		select {
 		case order := <-SWOrderTOM:
 			if order.PrimaryID == "RedundantPackage" {
@@ -325,6 +327,8 @@ func TestReceivingRedundant() {
 				countNonRedundant++
 			}
 			fmt.Printf("Received: %#v\n", order)
+		case <-done:
+			break readLoop
 		}
 	}
 	fmt.Printf("Test results:\n Unique RedundantPackages received: %v\n Unique NonRedundantPackages received %v\n", countRedundant, countNonRedundant)
