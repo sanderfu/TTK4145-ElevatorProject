@@ -310,6 +310,10 @@ func TestSendingRedundant(ordersToSend int) {
 
 //TestReceivingRedundant Function to test that order manager gets unique packages only
 func TestReceivingRedundant() {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("Hit enter to start receiving SW from RX\n")
+	text, _ := reader.ReadString('\n')
+	fmt.Println(text)
 	countRedundant := 0
 	countNonRedundant := 0
 	for start := time.Now(); time.Since(start) < 20*time.Second; {
