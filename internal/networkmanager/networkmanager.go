@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"time"
 
@@ -47,6 +46,8 @@ func NetworkManager() {
 	recentSignatures = make([]string, 0)
 	initTransmitter <- struct{}{}
 	initReceiver <- struct{}{}
+	InitDriverTX <- struct{}{}
+	InitDriverRX <- struct{}{}
 	mode = datatypes.Network
 	ip, _ = localip.LocalIP()
 
@@ -62,8 +63,9 @@ func NetworkManager() {
 
 func networkWatch() {
 	for {
-		time.Sleep(500 * time.Millisecond)
+		time.Sleep(1000 * time.Millisecond)
 		theIP, err := localip.LocalIP()
+		fmt.Println("NetworkWatch checking state, the IP is", theIP)
 		if err != nil {
 			if mode != datatypes.Localhost {
 				ip = "LOCALHOST"
@@ -159,7 +161,6 @@ func transmitter(port int) {
 			}
 		case <-killTransmitter:
 			KillDriverTX <- struct{}{}
-			time.Sleep(1000 * time.Millisecond)
 			initTransmitter <- struct{}{}
 			return
 		}
@@ -192,7 +193,6 @@ func receiver(port int) {
 			}
 		case <-killReceiver:
 			KillDriverRX <- struct{}{}
-			time.Sleep(1000 * time.Millisecond)
 			initReceiver <- struct{}{}
 			return
 		}
@@ -223,56 +223,6 @@ func TestRecieving() {
 	}
 }
 
-//TestSendingBuffered Function to test need for buffered RX channels
-func TestSendingBuffered() {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Hit enter to start sending 10 SW orders")
-	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
-	for i := 0; i < 10; i++ {
-		fmt.Printf("Sending order %v\n", i)
-		var testOrdre datatypes.SWOrder
-		testOrdre.PrimaryID = "12345"
-		testOrdre.BackupID = "67890"
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderTX <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-}
-
-//TestRecievingBuffered Function to test need for buffered RX channels
-func TestRecievingBuffered() {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Println("Hit enter to start processing orders on SWOrderRX channel")
-	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
-	for {
-		select {
-		case order := <-SWOrderRX:
-			fmt.Printf("Received: %#v\n", order)
-			printRecentSignatures()
-		}
-	}
-}
-
-func internetOn(on bool) {
-	var command string
-	if on {
-		command = "sudo ifconfig enp4s0 up"
-	} else {
-		command = "sudo ifconfig enp4s0 down"
-	}
-	out, err := exec.Command("/bin/bash", "-c", command).Output()
-	if err != nil {
-		fmt.Printf("%s", err)
-	}
-	fmt.Println("Command Successfully Executed")
-	output := string(out[:])
-	fmt.Println(output)
-
-}
-
 //TestSendingRedundant Function to test transmitting redundancy measures to packet loss.
 func TestSendingRedundant(ordersToSend int) {
 	//Create dummy order from order manager
@@ -289,9 +239,6 @@ func TestSendingRedundant(ordersToSend int) {
 		testOrdre.Floor = datatypes.SECOND
 		SWOrderFOM <- testOrdre
 		time.Sleep(1 * time.Second)
-		if i == 5 {
-			go internetOn(false)
-		}
 	}
 
 	for i := 0; i < ordersToSend; i++ {
@@ -304,22 +251,15 @@ func TestSendingRedundant(ordersToSend int) {
 		testOrdre.Floor = datatypes.SECOND
 		SWOrderTX <- testOrdre
 		time.Sleep(1 * time.Second)
-		if i == 0 {
-			go internetOn(true)
-		}
 	}
 
 }
 
 //TestReceivingRedundant Function to test that order manager gets unique packages only
 func TestReceivingRedundant() {
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("Hit enter to start receiving SW from RX\n")
-	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
 	countRedundant := 0
 	countNonRedundant := 0
-	done := time.After(25 * time.Second)
+	done := time.After(60 * time.Second)
 readLoop:
 	for {
 		select {

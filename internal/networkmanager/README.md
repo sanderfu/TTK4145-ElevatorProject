@@ -27,3 +27,8 @@
  * Implement checking for network connection loss and handle (restart Network Manager silently in localhost mode)
     * WORK IN PROGRESS, current state NOT WORKING
  * Test network connection loss handling
+
+
+ ### Bugs
+  * Sometimes when using the networkswitching script in testing, switching from network to localhost we stop receiving
+    * By making the networkWatch sleep one second between check the bug is appearing to be inactive, must explore further.

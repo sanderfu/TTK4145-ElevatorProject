@@ -64,3 +64,5 @@ var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderCom
 
 var KillDriverTX = make(chan struct{}, 1)
 var KillDriverRX = make(chan struct{}, 1)
+var InitDriverTX = make(chan struct{}, 1)
+var InitDriverRX = make(chan struct{}, 1)
