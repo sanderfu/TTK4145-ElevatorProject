@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	packetduplicates    = 10
+	packetduplicates    = 1
 	maxuniquesignatures = 25
 	removeinclean       = int(maxuniquesignatures / 5)
 )
@@ -136,9 +136,8 @@ func transmitter(port int) {
 	for {
 		select {
 		case order := <-SWOrderFOM:
-			fmt.Println("SWOrder to transmit")
-			fmt.Printf("%#v\n", order)
 			order.Signature = createSignature(0)
+			order.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				SWOrderTX <- order
 			}
@@ -188,22 +187,34 @@ func receiver(port int) {
 				SWOrderTOM <- order
 			}
 		case costReq := <-CostRequestRX:
+			fmt.Println("costReq")
 			if !checkDuplicate(costReq.Signature) {
 				CostRequestTOM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
+			fmt.Println("costAns")
+			if costAns.DestinationID != ip {
+				continue
+			}
+			fmt.Println("costAns past barricade")
 			if !checkDuplicate(costAns.Signature) {
 				CostAnswerTOM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:
+			fmt.Println("orderRecvAck")
+			if orderRecvAck.DestinationID != ip {
+				continue
+			}
 			if !checkDuplicate(orderRecvAck.Signature) {
 				OrderRecvAckTOM <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteRX:
+			fmt.Println("orderComplete")
 			if !checkDuplicate(orderComplete.Signature) {
 				OrderCompleteTOM <- orderComplete
 			}
 		case <-killReceiver:
+			fmt.Println("Killing")
 			KillDriverRX <- struct{}{}
 			initReceiver <- struct{}{}
 			return

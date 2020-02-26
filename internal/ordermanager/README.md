@@ -13,5 +13,6 @@
     * Assumptions:
         * Networkmanager must only let SWOrders where we are primary or backup through to Order Manager - IMPLEMENTED
     * Test interaction between three PCs where one recieves HW order and all have different cost - FAIL
-        * Wrong Primary/Secondary combination is choosen
+        * Wrong Primary/Secondary combination is choosen - FIXED AND PASSED
+    * Major bug was present with TOM channels filling up with no emptying. Fixed by introducing DestionationID.
  * Test that most extensive test from network manager still produces correct result

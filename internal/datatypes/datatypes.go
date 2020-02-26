@@ -42,6 +42,7 @@ type CostAnswer struct {
 
 type SWOrder struct {
 	Signature string
+	SourceID  string
 	PrimaryID string
 	BackupID  string
 	Floor     Floor
@@ -49,10 +50,11 @@ type SWOrder struct {
 }
 
 type OrderRecvAck struct {
-	Signature string
-	SourceID  string
-	Floor     Floor
-	Dir       Direction
+	Signature     string
+	SourceID      string
+	DestinationID string
+	Floor         Floor
+	Dir           Direction
 }
 
 type OrderComplete struct {

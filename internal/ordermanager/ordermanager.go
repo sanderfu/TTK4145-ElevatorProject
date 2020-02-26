@@ -170,10 +170,10 @@ func dummyCostAns(costreq datatypes.CostRequest) {
 
 func dummyOrderRecvAck(swOrder datatypes.SWOrder, fail bool) {
 	if !fail {
-		fmt.Println("Sending Ack")
 		var orderRecvAck datatypes.OrderRecvAck
 		orderRecvAck.Dir = swOrder.Dir
 		orderRecvAck.Floor = swOrder.Floor
+		orderRecvAck.DestinationID = swOrder.SourceID
 		channels.OrderRecvAckFOM <- orderRecvAck
 	} else {
 		return
