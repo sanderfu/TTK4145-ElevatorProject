@@ -9,8 +9,8 @@ import (
 func main() {
 	go networkmanager.NetworkManager()
 
-	go networkmanager.TestSendingRedundant(30)
-	go networkmanager.TestReceivingRedundant()
+	go networkmanager.TestSendingRedundant(10)
+	go networkmanager.TestReceivingRedundant(25)
 	for {
 
 	}

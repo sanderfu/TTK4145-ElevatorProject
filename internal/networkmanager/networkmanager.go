@@ -256,10 +256,10 @@ func TestSendingRedundant(ordersToSend int) {
 }
 
 //TestReceivingRedundant Function to test that order manager gets unique packages only
-func TestReceivingRedundant() {
+func TestReceivingRedundant(runtime time.Duration) {
 	countRedundant := 0
 	countNonRedundant := 0
-	done := time.After(60 * time.Second)
+	done := time.After(runtime * time.Second)
 readLoop:
 	for {
 		select {
