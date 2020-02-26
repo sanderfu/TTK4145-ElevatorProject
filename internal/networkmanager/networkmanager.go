@@ -50,6 +50,7 @@ func NetworkManager() {
 	InitDriverRX <- struct{}{}
 	mode = datatypes.Network
 	ip, _ = localip.LocalIP()
+	ip += ":" + strconv.Itoa(os.Getpid())
 
 	for {
 		select {
@@ -68,14 +69,14 @@ func networkWatch() {
 		//fmt.Println("NetworkWatch checking state, the IP is", theIP)
 		if err != nil {
 			if mode != datatypes.Localhost {
-				ip = "LOCALHOST"
+				ip = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
 				killTransmitter <- struct{}{}
 				killReceiver <- struct{}{}
 			}
 		} else {
 			if mode != datatypes.Network {
-				ip = theIP
+				ip = theIP + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
 				killTransmitter <- struct{}{}
 				killReceiver <- struct{}{}
@@ -135,6 +136,8 @@ func transmitter(port int) {
 	for {
 		select {
 		case order := <-SWOrderFOM:
+			fmt.Println("SWOrder to transmit")
+			fmt.Printf("%#v\n", order)
 			order.Signature = createSignature(0)
 			for i := 0; i < packetduplicates; i++ {
 				SWOrderTX <- order
@@ -153,7 +156,7 @@ func transmitter(port int) {
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
 			orderRecvAck.Signature = createSignature(3)
-			//orderRecvAck.SourceID = ip
+			orderRecvAck.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
@@ -175,11 +178,13 @@ func receiver(port int) {
 	for {
 		select {
 		case order := <-SWOrderRX:
+			fmt.Println("SWORDER")
 			if ip != order.PrimaryID && ip != order.BackupID {
 				//We are not part of this order, ignore it
-				break
+				continue
 			}
 			if !checkDuplicate(order.Signature) {
+				fmt.Println("SWOrder passed barricades")
 				SWOrderTOM <- order
 			}
 		case costReq := <-CostRequestRX:

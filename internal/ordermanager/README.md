@@ -12,5 +12,6 @@
  * Modify prev. function to wait for confirmation from primary and backup that order is recieved.
     * Assumptions:
         * Networkmanager must only let SWOrders where we are primary or backup through to Order Manager - IMPLEMENTED
-    * Test interaction between three PCs where one recieves HW order and all have different cost
+    * Test interaction between three PCs where one recieves HW order and all have different cost - FAIL
+        * Wrong Primary/Secondary combination is choosen
  * Test that most extensive test from network manager still produces correct result
