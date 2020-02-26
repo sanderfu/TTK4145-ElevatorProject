@@ -175,6 +175,10 @@ func receiver(port int) {
 	for {
 		select {
 		case order := <-SWOrderRX:
+			if ip != order.PrimaryID && ip != order.BackupID {
+				//We are not part of this order, ignore it
+				break
+			}
 			if !checkDuplicate(order.Signature) {
 				SWOrderTOM <- order
 			}

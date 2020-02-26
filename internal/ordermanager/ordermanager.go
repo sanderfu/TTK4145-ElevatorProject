@@ -12,9 +12,14 @@ import (
 )
 
 const (
-	answerWaitMS = 1000
-	maxCost      = 10
+	answerWaitMS       = 1000
+	orderRecvAckWaitMS = 1000
+	maxCost            = 10
 )
+
+//Test variables
+var failSendingAck = false
+var costValue = 5
 
 var start time.Time
 
@@ -34,10 +39,10 @@ func receiver() {
 	for {
 		select {
 		case swOrder := <-channels.SWOrderTOM:
-			//Placeholder
-			fmt.Println(swOrder)
+			dummyOrderRecvAck(swOrder, failSendingAck)
+			fmt.Printf("Received: %#v\n", swOrder)
 		case costReq := <-channels.CostRequestTOM:
-			dummyCostAns(costReq, 5)
+			dummyCostAns(costReq)
 		case orderComplete := <-channels.OrderCompleteTOM:
 			//Placeholder
 			fmt.Println(orderComplete)
@@ -64,11 +69,11 @@ func orderRegHW() {
 			done := time.After(answerWaitMS * time.Millisecond)
 			primaryCost := maxCost + 1
 			backupCost := maxCost + 1
-		waitLoop:
+		costWaitloop:
 			for {
 				select {
 				case <-done:
-					break waitLoop
+					break costWaitloop
 				case costAns := <-channels.CostAnswerTOM:
 					fmt.Printf("%#v\n", costAns)
 					if costAns.CostValue < primaryCost {
@@ -88,9 +93,31 @@ func orderRegHW() {
 			}
 
 			channels.SWOrderFOM <- order
+			//Wait for OrderRecAck from primary and backup
+			done = time.After(orderRecvAckWaitMS * time.Millisecond)
+			ackCounter := 0
+		ackWaitloop:
+			for {
+				select {
+				case <-done:
+					//Timer reached end, the order transmit is assumed to have failed and order is put back into the channel
+					channels.OrderFHM <- order
+					break ackWaitloop
+				case orderRecvAck := <-channels.OrderRecvAckTOM:
+					if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
+						//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
+						if orderRecvAck.Floor == order.Floor && orderRecvAck.Dir == order.Dir {
+							ackCounter++
+						}
+					}
+					if ackCounter == 2 {
+						//Transmit was successful
+						break ackWaitloop
+					}
+				}
+			}
 		}
 	}
-
 }
 
 func TestOrderRegHW() {
@@ -107,10 +134,21 @@ func TestOrderRegHW() {
 
 }
 
-func dummyCostAns(costreq datatypes.CostRequest, costValue int) {
+func dummyCostAns(costreq datatypes.CostRequest) {
 	var costAns datatypes.CostAnswer
 	costAns.CostValue = costValue
 	costAns.DestinationID = costreq.SourceID
 
 	channels.CostAnswerFOM <- costAns
+}
+
+func dummyOrderRecvAck(swOrder datatypes.SWOrder, fail bool) {
+	if !fail {
+		var orderRecvAck datatypes.OrderRecvAck
+		orderRecvAck.Dir = swOrder.Dir
+		orderRecvAck.Floor = swOrder.Floor
+		channels.OrderRecvAckFOM <- orderRecvAck
+	} else {
+		return
+	}
 }
