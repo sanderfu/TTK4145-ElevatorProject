@@ -28,6 +28,7 @@ func OrderManager() {
 	fmt.Println("Hello go, this is Order Manager speaking!")
 
 	go receiver()
+	go orderRegHW()
 }
 
 func receiver() {
@@ -36,11 +37,8 @@ func receiver() {
 		case swOrder := <-channels.SWOrderTOM:
 			//Placeholder
 			fmt.Println(swOrder)
-		case hwOrder := <-channels.OrderFHM:
-			orderRegHW(hwOrder)
 		case costReq := <-channels.CostRequestTOM:
-			//Placeholder
-			fmt.Println(costReq)
+			dummyCostAns(costReq)
 		case orderComplete := <-channels.OrderCompleteTOM:
 			//Placeholder
 			fmt.Println(orderComplete)
@@ -51,61 +49,49 @@ func receiver() {
 	}
 }
 
-func orderRegHW(order datatypes.SWOrder) {
-	//Make cost request
-	var request datatypes.CostRequest
-	request.Direction = order.Dir
-	request.Floor = order.Floor
-	request.Costsignature = "abc"
-	//request.Costsignature = createCostSignature(order)
-
-	//Broadcast cost request
-	channels.CostRequestFOM <- request
-
-	//Wait for answers
-	done := time.After(answerWaitMS * time.Millisecond)
-	primaryCost := maxCost + 1
-	backupCost := maxCost + 1
-waitLoop:
+func orderRegHW() {
 	for {
 		select {
-		case <-done:
-			break waitLoop
-		case costAns := <-channels.CostAnswerTOM:
-			if costAns.Costsignature != request.Costsignature {
-				channels.CostAnswerTOM <- costAns
-				break
+		case order := <-channels.OrderFHM:
+			//Make cost request
+			var request datatypes.CostRequest
+			request.Direction = order.Dir
+			request.Floor = order.Floor
+
+			//Broadcast cost request
+			channels.CostRequestFOM <- request
+
+			//Wait for answers
+			done := time.After(answerWaitMS * time.Millisecond)
+			primaryCost := maxCost + 1
+			backupCost := maxCost + 1
+		waitLoop:
+			for {
+				select {
+				case <-done:
+					break waitLoop
+				case costAns := <-channels.CostAnswerTOM:
+					fmt.Printf("%#v\n", costAns)
+					if costAns.CostValue < primaryCost {
+						backupCost = primaryCost
+						primaryCost = costAns.CostValue
+						order.PrimaryID = order.BackupID
+						order.PrimaryID = costAns.SourceID
+					} else if costAns.CostValue < backupCost {
+						backupCost = costAns.CostValue
+						order.BackupID = costAns.SourceID
+					}
+				}
 			}
-			fmt.Printf("Correct signature: %#v\n", costAns)
-			if costAns.CostValue < primaryCost {
-				backupCost = primaryCost
-				primaryCost = costAns.CostValue
-				order.PrimaryID = order.BackupID
-				order.PrimaryID = costAns.SourceID
-			} else if costAns.CostValue < backupCost {
-				backupCost = costAns.CostValue
-				order.BackupID = costAns.SourceID
+			//Handle situation with no backup
+			if backupCost == maxCost+1 {
+				order.BackupID = order.PrimaryID
 			}
+
+			channels.SWOrderFOM <- order
 		}
 	}
-	//Handle situation with no backup
-	if backupCost == maxCost+1 {
-		order.BackupID = order.PrimaryID
-	}
 
-	channels.SWOrderFOM <- order
-
-	return
-
-}
-
-func createCostSignature(order datatypes.SWOrder) string {
-	timeSinceStart := time.Since(start)
-	tStr := strconv.FormatInt(timeSinceStart.Nanoseconds()/1e6, 10)
-	floorInt := int(order.Floor)
-	dirInt := int(order.Dir)
-	orderStr := "F:" + strconv.Itoa(floorInt) + "D:" + strconv.Itoa(dirInt)
-	return orderStr + ":" + tStr
 }
 
 func TestOrderRegHW() {
@@ -118,20 +104,18 @@ func TestOrderRegHW() {
 	dummyOrder.Floor = 2
 	dummyOrder.Dir = 1
 
-	var dummyCostAns1 datatypes.CostAnswer
-	dummyCostAns1.CostValue = 5
-	dummyCostAns1.SourceID = "Dummy1"
-	dummyCostAns1.Costsignature = "123"
-
-	var dummyCostAns2 datatypes.CostAnswer
-	dummyCostAns2.CostValue = 7
-	dummyCostAns2.SourceID = "Dummy2"
-	dummyCostAns2.Costsignature = "abc"
-
 	channels.OrderFHM <- dummyOrder
 
-	channels.CostAnswerTOM <- dummyCostAns1
-	time.Sleep(2 * time.Millisecond)
-	channels.CostAnswerTOM <- dummyCostAns2
+}
 
+func dummyCostAns(costreq datatypes.CostRequest) {
+	//Generate 3 different costAnswers
+	baseCost := 1
+	for i := 0; i < 3; i++ {
+		var costAns datatypes.CostAnswer
+		costAns.CostValue = baseCost * i
+		costAns.DestinationID = costreq.SourceID
+		costAns.SourceID = "Dummy" + strconv.Itoa(i)
+		channels.CostAnswerTX <- costAns
+	}
 }

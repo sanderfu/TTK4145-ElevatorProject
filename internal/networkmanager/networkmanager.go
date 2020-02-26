@@ -65,7 +65,7 @@ func networkWatch() {
 	for {
 		time.Sleep(1000 * time.Millisecond)
 		theIP, err := localip.LocalIP()
-		fmt.Println("NetworkWatch checking state, the IP is", theIP)
+		//fmt.Println("NetworkWatch checking state, the IP is", theIP)
 		if err != nil {
 			if mode != datatypes.Localhost {
 				ip = "LOCALHOST"
@@ -141,16 +141,19 @@ func transmitter(port int) {
 			}
 		case costReq := <-CostRequestFOM:
 			costReq.Signature = createSignature(1)
+			costReq.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostRequestTX <- costReq
 			}
 		case costAns := <-CostAnswerFOM:
 			costAns.Signature = createSignature(2)
+			costAns.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostAnswerTX <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
 			orderRecvAck.Signature = createSignature(3)
+			orderRecvAck.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
@@ -180,7 +183,7 @@ func receiver(port int) {
 				CostRequestTOM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
-			if !checkDuplicate(costAns.Signature) {
+			if !checkDuplicate(costAns.Signature) && costAns.DestinationID == ip {
 				CostAnswerTOM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:

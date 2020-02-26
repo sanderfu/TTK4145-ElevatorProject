@@ -27,16 +27,14 @@ const ()
 //  will be received as zero-values over the network.
 
 type CostRequest struct {
-	Signature     string //Used by networkmanager to remove duplicates
-	Costsignature string //Used by ordermanager to match req. with ans.
-	SourceID      string //ID of sender, to direct answer back.
-	Floor         Floor
-	Direction     Direction
+	Signature string //Used by networkmanager to remove duplicates
+	SourceID  string //ID of sender, to direct answer back.
+	Floor     Floor
+	Direction Direction
 }
 
 type CostAnswer struct {
 	Signature     string //Used by networkmanager to remove duplicates
-	Costsignature string //Used by ordermanager to match req. with ans.
 	SourceID      string //ID of answer sender.
 	DestinationID string //ID of answer receiver
 	CostValue     int
