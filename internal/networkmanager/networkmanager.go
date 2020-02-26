@@ -153,7 +153,7 @@ func transmitter(port int) {
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
 			orderRecvAck.Signature = createSignature(3)
-			orderRecvAck.SourceID = ip
+			//orderRecvAck.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
@@ -183,7 +183,7 @@ func receiver(port int) {
 				CostRequestTOM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
-			if !checkDuplicate(costAns.Signature) && costAns.DestinationID == ip {
+			if !checkDuplicate(costAns.Signature) {
 				CostAnswerTOM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:

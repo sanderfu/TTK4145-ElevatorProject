@@ -8,3 +8,4 @@
     * Test reciving costAns and signing Primary and Backup ID - PASSED
     * Test reciving costAns alone on network - PASSED
     * Test working cost signature - PASSED
+ * Test functionality on two machines, where one sends out request and both answer

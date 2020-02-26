@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
@@ -38,7 +37,7 @@ func receiver() {
 			//Placeholder
 			fmt.Println(swOrder)
 		case costReq := <-channels.CostRequestTOM:
-			dummyCostAns(costReq)
+			dummyCostAns(costReq, 5)
 		case orderComplete := <-channels.OrderCompleteTOM:
 			//Placeholder
 			fmt.Println(orderComplete)
@@ -108,14 +107,10 @@ func TestOrderRegHW() {
 
 }
 
-func dummyCostAns(costreq datatypes.CostRequest) {
-	//Generate 3 different costAnswers
-	baseCost := 1
-	for i := 0; i < 3; i++ {
-		var costAns datatypes.CostAnswer
-		costAns.CostValue = baseCost * i
-		costAns.DestinationID = costreq.SourceID
-		costAns.SourceID = "Dummy" + strconv.Itoa(i)
-		channels.CostAnswerTX <- costAns
-	}
+func dummyCostAns(costreq datatypes.CostRequest, costValue int) {
+	var costAns datatypes.CostAnswer
+	costAns.CostValue = costValue
+	costAns.DestinationID = costreq.SourceID
+
+	channels.CostAnswerFOM <- costAns
 }
