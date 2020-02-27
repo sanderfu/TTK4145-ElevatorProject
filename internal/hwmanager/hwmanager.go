@@ -53,14 +53,10 @@ func GetHWORder(hwOrderChan chan<- datatypes.HW_Order) {
 	}
 }
 
-func SetOrderComplete(orderCompleteChan <-chan datatypes.Order_complete) {
-	// Listen for order complete messages from Order Manager
-	for {
-		completedOrder := <-orderCompleteChan
+func SetOrderComplete(completedOrder datatypes.Order_complete) {
 
-		fmt.Println("Got Order Complete message from Order Manager")
+	fmt.Println("Got Order Complete message from Order Manager")
+	elevio.SetButtonLamp(elevio.ButtonType(completedOrder.Dir),
+		int(completedOrder.Floor), false)
 
-		elevio.SetButtonLamp(elevio.ButtonType(completedOrder.Dir),
-			int(completedOrder.Floor), false)
-	}
 }
