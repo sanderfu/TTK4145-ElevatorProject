@@ -1,27 +1,66 @@
 package hwmanager
 
 import (
+	"fmt"
+
 	"github.com/TTK4145/driver-go/elevio"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
 func Init() {
+	// TODO: Find out if this function should take addr and numFloors as args
 	addr := "192.168.0.163:15657"
 	numFloors := 4
 
 	elevio.Init(addr, numFloors)
-
-	testPolling()
 }
 
-func testPolling() {
+func GetCurrentState(curFloorChan chan<- datatypes.Floor) {
 
-	print("Polling stop button... ")
+	floorSensorChan := make(chan int)
+	go elevio.PollFloorSensor(floorSensorChan)
 
-	stopBtnChan := make(chan bool)
-	go elevio.PollStopButton(stopBtnChan)
+	for {
+		floor := <-floorSensorChan
 
-	pressed := <-stopBtnChan
+		fmt.Println("Arrived at floor", floor)
 
-	println("Pressed = ", pressed)
+		elevio.SetFloorIndicator(floor)
 
+		curFloorChan <- datatypes.Floor(floor)
+	}
+
+}
+
+func GetHWORder(hwOrderChan chan<- datatypes.HW_Order) {
+
+	// Poll buttons
+	btnChan := make(chan elevio.ButtonEvent)
+	go elevio.PollButtons(btnChan)
+
+	for {
+
+		btnValue := <-btnChan
+
+		fmt.Println("Floor:", btnValue.Floor, "Button:", btnValue.Button)
+
+		hwOrder := datatypes.HW_Order{
+			Floor: datatypes.Floor(btnValue.Floor),
+			Dir:   datatypes.Direction(btnValue.Button),
+		}
+
+		hwOrderChan <- hwOrder
+	}
+}
+
+func SetOrderComplete(orderCompleteChan <-chan datatypes.Order_complete) {
+	// Listen for order complete messages from Order Manager
+	for {
+		completedOrder := <-orderCompleteChan
+
+		fmt.Println("Got Order Complete message from Order Manager")
+
+		elevio.SetButtonLamp(elevio.ButtonType(completedOrder.Dir),
+			int(completedOrder.Floor), false)
+	}
 }

@@ -8,3 +8,11 @@ HW manager needs:
     basically just a wrapper function?
 - Function for clearing all lights
 - Wrapper functions for setting direction and stopping motor
+
+Needs:
+
+- Function for turning on lights at different floors when receiving message from
+order manager
+- Function for turning off lights at different floors when receiving message 
+from order manager
+- Function for sending HW order to order manager
