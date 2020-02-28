@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	answerWaitMS       = 1000
-	orderRecvAckWaitMS = 1000
+	answerWaitMS       = 250
+	orderRecvAckWaitMS = 250
 	maxCost            = 10
 )
 
@@ -25,6 +25,7 @@ var start time.Time
 
 var startRegistration = make(chan struct{}, 1)
 
+//OrderManager ...
 func OrderManager() {
 
 	start = time.Now()
@@ -47,8 +48,7 @@ func receiver() {
 			dummyCostAns(costReq)
 			fmt.Println("DummyCostAns replied")
 		case orderComplete := <-channels.OrderCompleteTOM:
-			//Placeholder
-			fmt.Println(orderComplete)
+			dummyOrderCompleteRecv(orderComplete)
 		default:
 
 		}
@@ -125,6 +125,7 @@ func orderRegHW() {
 					}
 				}
 			}
+
 		}
 	}
 }
@@ -176,4 +177,8 @@ func dummyOrderRecvAck(swOrder datatypes.SWOrder, fail bool) {
 	} else {
 		return
 	}
+}
+
+func dummyOrderCompleteRecv(orderComplete datatypes.OrderComplete) {
+	fmt.Printf("Recieved an orderComplete: %#v\n", orderComplete)
 }

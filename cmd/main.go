@@ -11,7 +11,6 @@ func main() {
 
 	go networkmanager.NetworkManager()
 	go ordermanager.OrderManager()
-
 	go ordermanager.ConfigureAndRunTest()
 	for {
 
