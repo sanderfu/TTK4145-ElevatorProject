@@ -17,6 +17,10 @@ func main() {
 
 	hwmanager.Init()
 
+	for {
+
+	}
+
 	fmt.Println("Done main")
 
 }

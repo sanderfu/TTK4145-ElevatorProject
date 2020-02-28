@@ -13,17 +13,18 @@ func Init() {
 	numFloors := 4
 
 	elevio.Init(addr, numFloors)
+
+	go fsmMock()
+	go omMock()
 }
 
-func GetCurrentState(curFloorChan chan<- datatypes.Floor) {
+func PollCurrentFloor(curFloorChan chan<- datatypes.Floor) {
 
 	floorSensorChan := make(chan int)
 	go elevio.PollFloorSensor(floorSensorChan)
 
 	for {
 		floor := <-floorSensorChan
-
-		fmt.Println("Arrived at floor", floor)
 
 		elevio.SetFloorIndicator(floor)
 
@@ -32,17 +33,14 @@ func GetCurrentState(curFloorChan chan<- datatypes.Floor) {
 
 }
 
-func GetHWORder(hwOrderChan chan<- datatypes.HW_Order) {
+func PollHWORder(hwOrderChan chan<- datatypes.HW_Order) {
 
-	// Poll buttons
 	btnChan := make(chan elevio.ButtonEvent)
 	go elevio.PollButtons(btnChan)
 
 	for {
 
 		btnValue := <-btnChan
-
-		fmt.Println("Floor:", btnValue.Floor, "Button:", btnValue.Button)
 
 		hwOrder := datatypes.HW_Order{
 			Floor: datatypes.Floor(btnValue.Floor),
@@ -59,4 +57,60 @@ func SetOrderComplete(completedOrder datatypes.Order_complete) {
 	elevio.SetButtonLamp(elevio.ButtonType(completedOrder.Dir),
 		int(completedOrder.Floor), false)
 
+}
+
+func convertOrderDirToMotorDir(dir datatypes.Direction) datatypes.Direction {
+	switch dir {
+	case datatypes.UP:
+		dir = 1
+	case datatypes.DOWN:
+		dir = -1
+	case datatypes.INSIDE:
+		dir = 0
+	}
+	return dir
+}
+
+// Mocks below
+
+func fsmMock() {
+	go fsmPollFloorMock()
+}
+
+func fsmPollFloorMock() {
+
+	// Poll current floor
+	floorChan := make(chan datatypes.Floor)
+
+	go PollCurrentFloor(floorChan)
+
+	for {
+		floor := <-floorChan
+		fmt.Println("Reached floor", floor)
+	}
+}
+
+//func fsmSetDirectionMock() {
+//
+//	for {
+//
+//	}
+//}
+
+func omMock() {
+	go omMockGetHWOrders()
+}
+
+func omMockGetHWOrders() {
+
+	// Poll HW orders
+	hwOrderChan := make(chan datatypes.HW_Order)
+
+	go PollHWORder(hwOrderChan)
+
+	for {
+		hwOrder := <-hwOrderChan
+
+		fmt.Println("HW Order: Floor", hwOrder.Floor, "Direction:", hwOrder.Dir)
+	}
 }
