@@ -1,7 +1,6 @@
 package networkmanager
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strconv"
@@ -136,30 +135,35 @@ func transmitter(port int) {
 	for {
 		select {
 		case order := <-SWOrderFOM:
+			fmt.Println("Transmit swOrder")
 			order.Signature = createSignature(0)
 			order.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				SWOrderTX <- order
 			}
 		case costReq := <-CostRequestFOM:
+			fmt.Println("Transmit costReq")
 			costReq.Signature = createSignature(1)
 			costReq.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostRequestTX <- costReq
 			}
 		case costAns := <-CostAnswerFOM:
+			fmt.Println("Transmit costAns")
 			costAns.Signature = createSignature(2)
 			costAns.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostAnswerTX <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
+			fmt.Println("Transmit orderRecvAck")
 			orderRecvAck.Signature = createSignature(3)
 			orderRecvAck.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteFOM:
+			fmt.Println("Transmit orderComplete")
 			orderComplete.Signature = createSignature(4)
 			for i := 0; i < packetduplicates; i++ {
 				OrderCompleteTX <- orderComplete
@@ -182,7 +186,11 @@ func receiver(port int) {
 				continue
 			}
 			if !checkDuplicate(order.Signature) {
-				SWOrderTOM <- order
+				if order.PrimaryID == ip {
+					SWOrderTOMPrimary <- order
+				} else {
+					SWOrderTOMBackup <- order
+				}
 			}
 		case costReq := <-CostRequestRX:
 			if !checkDuplicate(costReq.Signature) {
@@ -236,59 +244,4 @@ func TestRecieving() {
 
 		}
 	}
-}
-
-//TestSendingRedundant Function to test transmitting redundancy measures to packet loss.
-func TestSendingRedundant(ordersToSend int) {
-	//Create dummy order from order manager
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("Hit enter to start sending %v SW from 'Order Manager'", ordersToSend)
-	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
-	for i := 0; i < ordersToSend; i++ {
-		fmt.Printf("Sending order %v\n", i)
-		var testOrdre datatypes.SWOrder
-		testOrdre.PrimaryID = "RedundantPackage"
-		testOrdre.BackupID = strconv.Itoa(i)
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderFOM <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-
-	for i := 0; i < ordersToSend; i++ {
-		fmt.Printf("Sending order %v\n", i)
-		var testOrdre datatypes.SWOrder
-		testOrdre.Signature = createSignature(0)
-		testOrdre.PrimaryID = "NonRedundantPackage"
-		testOrdre.BackupID = strconv.Itoa(i)
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderTX <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-
-}
-
-//TestReceivingRedundant Function to test that order manager gets unique packages only
-func TestReceivingRedundant(runtime time.Duration) {
-	countRedundant := 0
-	countNonRedundant := 0
-	done := time.After(runtime * time.Second)
-readLoop:
-	for {
-		select {
-		case order := <-SWOrderTOM:
-			if order.PrimaryID == "RedundantPackage" {
-				countRedundant++
-			} else if order.PrimaryID == "NonRedundantPackage" {
-				countNonRedundant++
-			}
-			fmt.Printf("Received: %#v\n", order)
-		case <-done:
-			break readLoop
-		}
-	}
-	fmt.Printf("Test results:\n Unique RedundantPackages received: %v\n Unique NonRedundantPackages received %v\n", countRedundant, countNonRedundant)
-	printRecentSignatures()
 }
