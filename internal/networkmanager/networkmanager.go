@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	packetduplicates    = 1
+	packetduplicates    = 10
 	maxuniquesignatures = 25
 	removeinclean       = int(maxuniquesignatures / 5)
 )
@@ -177,31 +177,25 @@ func receiver(port int) {
 	for {
 		select {
 		case order := <-SWOrderRX:
-			fmt.Println("SWORDER")
 			if ip != order.PrimaryID && ip != order.BackupID {
 				//We are not part of this order, ignore it
 				continue
 			}
 			if !checkDuplicate(order.Signature) {
-				fmt.Println("SWOrder passed barricades")
 				SWOrderTOM <- order
 			}
 		case costReq := <-CostRequestRX:
-			fmt.Println("costReq")
 			if !checkDuplicate(costReq.Signature) {
 				CostRequestTOM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
-			fmt.Println("costAns")
 			if costAns.DestinationID != ip {
 				continue
 			}
-			fmt.Println("costAns past barricade")
 			if !checkDuplicate(costAns.Signature) {
 				CostAnswerTOM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:
-			fmt.Println("orderRecvAck")
 			if orderRecvAck.DestinationID != ip {
 				continue
 			}
@@ -209,12 +203,10 @@ func receiver(port int) {
 				OrderRecvAckTOM <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteRX:
-			fmt.Println("orderComplete")
 			if !checkDuplicate(orderComplete.Signature) {
 				OrderCompleteTOM <- orderComplete
 			}
 		case <-killReceiver:
-			fmt.Println("Killing")
 			KillDriverRX <- struct{}{}
 			initReceiver <- struct{}{}
 			return

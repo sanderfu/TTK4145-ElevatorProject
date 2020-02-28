@@ -90,8 +90,6 @@ func orderRegHW() {
 						}
 					}
 				}
-				fmt.Println("Done choosing primary and backup")
-				fmt.Printf("%#v\n", order)
 				//Handle situation with no backup
 				if backupCost == maxCost+1 {
 					order.BackupID = order.PrimaryID
