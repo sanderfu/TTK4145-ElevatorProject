@@ -32,8 +32,11 @@ var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComp
 //OrderCompleteRX ...
 var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
-//SWOrderTOM channel from Network Manager to Order Manager
-var SWOrderTOM chan datatypes.SWOrder = make(chan datatypes.SWOrder, 10)
+//SWOrderTOMPrimary channel for delivering primary orders to Order Manager from Network Manager
+var SWOrderTOMPrimary chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+
+//SWOrderTOMBackup is channel for delivering backup orders to Order Manager from Network manager
+var SWOrderTOMBackup chan datatypes.SWOrder = make(chan datatypes.SWOrder)
 
 //SWOrderFOM channel from Order Manager to Network Manager
 var SWOrderFOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
@@ -70,7 +73,4 @@ var InitDriverRX = make(chan struct{}, 1)
 //Order manager
 
 //OrderFHM delivers orders from Hardware Manager to Order Manager
-var OrderFHM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
-
-//Unfinished
-var LigthCommand chan datatypes.LightCommand = make(chan datatypes.LightCommand)
+var OrderFHM chan datatypes.SWOrder = make(chan datatypes.SWOrder, 10)

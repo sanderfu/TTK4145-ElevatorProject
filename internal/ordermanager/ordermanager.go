@@ -34,15 +34,13 @@ func OrderManager() {
 
 	go receiver()
 	go orderRegHW()
+	go orderRegSW()
 
 }
 
 func receiver() {
 	for {
 		select {
-		case swOrder := <-channels.SWOrderTOM:
-			fmt.Printf("Received: %#v\n", swOrder)
-			dummyOrderRecvAck(swOrder, failSendingAck)
 		case costReq := <-channels.CostRequestTOM:
 			fmt.Printf("Received: %#v\n", costReq)
 			dummyCostAns(costReq)
@@ -181,4 +179,27 @@ func dummyOrderRecvAck(swOrder datatypes.SWOrder, fail bool) {
 
 func dummyOrderCompleteRecv(orderComplete datatypes.OrderComplete) {
 	fmt.Printf("Recieved an orderComplete: %#v\n", orderComplete)
+}
+
+func dummyRegisterOrder(swOrder datatypes.SWOrder, primary bool) {
+	if primary {
+		fmt.Println("Registering order in Primary queue")
+	} else {
+		fmt.Println("Registering order in backup queue ")
+	}
+}
+
+func orderRegSW() {
+	for {
+		select {
+		case order := <-channels.SWOrderTOMPrimary:
+			fmt.Printf("Received Primary: %#v\n", order)
+			dummyRegisterOrder(order, true)
+			dummyOrderRecvAck(order, failSendingAck)
+		case order := <-channels.SWOrderTOMBackup:
+			fmt.Printf("Received Backup: %#v\n", order)
+			dummyRegisterOrder(order, false)
+			dummyOrderRecvAck(order, failSendingAck)
+		}
+	}
 }

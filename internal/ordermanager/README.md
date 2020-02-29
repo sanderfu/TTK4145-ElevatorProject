@@ -1,7 +1,9 @@
 # Order manager
 
+### Note:
+The decision has been made to merge ordermanager and queuemanager under the ordermanager name. Docs will be updated after this module is completed.
+
 ### TODO - HW Order Registration
- * Set up datatypes(?) & channels for comm. with HW Manager and Queue Manager
  * Make function to recieve HW orders, broadcast cost request, recieve cost answers and decide primary and backup
     * Assumptions:
         * Networkmanager must write ID to structs requiring this - IMPLEMENTED
@@ -18,10 +20,12 @@
  * Test that most extensive test from network manager still produces correct result
  * Implement "broadcast lightcommand"
     * Make this feature unnecessary by using the recieved SW order instead. Idea: Send a duplicate of the SW order on a dedicated channel from networkmanager to ordermanagerfor this.
- * Reduce the waittimes to break after 250ms instead of after 1s and test functionality on 3 Terminals
- * Repeat the same test on 3 pcs on the sanntidssal
+ * Reduce the waittimes to break after 250ms instead of after 1s and test functionality on 3 Terminals - PASSED
+ * Repeat the same test on 3 pcs on the sanntidssal - PASSED
+ * Repeat same test on 3 PCs ont he sanntidssal w. packet loss 20% - PASSED
 
 ### TODO - SW Order Registration
+ * Set up primary and backup channel to QM (Queue manager) from Order manager.
  * Set up routine to listen for incoming SW orders
  * Redirect these WS orders to primary or backup channel for registration in queuemanager
  * Set up waitloop
