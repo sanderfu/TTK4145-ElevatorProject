@@ -37,4 +37,6 @@ The decision has been made to merge ordermanager and queuemanager under the orde
  ### TODO - Major midway testing
  * Test sending orders and ordercompletes on one terminal on one computer - PASSED
  * Test sending orders and ordercompletes on 3 terminals on one computer - PASSED
- * Test sending order and ordercompletes on 3 PCs on the sanntidlab
+ * Test sending order and ordercompletes on 3 PCs on the sanntidlab with 20% packet loss - PASSED
+
+ 
