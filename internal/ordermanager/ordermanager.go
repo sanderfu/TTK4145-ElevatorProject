@@ -3,12 +3,10 @@ package ordermanager
 import (
 	"fmt"
 	"os"
-	"strconv"
 	"time"
 
-	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
-
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 )
@@ -25,8 +23,14 @@ var costValue = 5
 
 var start time.Time
 
-var primaryQueue []datatypes.PrimaryOrder
-var backupQueue []datatypes.BackupOrder
+var primaryQueue []datatypes.QueueOrder
+var backupQueue []datatypes.QueueOrder
+
+var primaryAppend chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
+var primaryRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
+
+var backupAppend chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
+var backupRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
 
 //OrderManager ...
 func OrderManager() {
@@ -38,6 +42,8 @@ func OrderManager() {
 	go receiver()
 	go orderRegHW()
 	go orderRegSW()
+	go queueModifier()
+	go orderCompleteWatch()
 
 }
 
@@ -45,13 +51,8 @@ func receiver() {
 	for {
 		select {
 		case costReq := <-channels.CostRequestTOM:
-			fmt.Printf("Received: %#v\n", costReq)
 			dummyCostAns(costReq)
-			fmt.Println("DummyCostAns replied")
-		case orderComplete := <-channels.OrderCompleteTOM:
-			dummyOrderCompleteRecv(orderComplete)
 		default:
-
 		}
 	}
 }
@@ -79,7 +80,6 @@ func orderRegHW() {
 					case <-done:
 						break costWaitloop
 					case costAns := <-channels.CostAnswerTOM:
-						fmt.Printf("%#v\n", costAns)
 						if costAns.CostValue < primaryCost {
 							backupCost = primaryCost
 							primaryCost = costAns.CostValue
@@ -107,26 +107,19 @@ func orderRegHW() {
 						channels.OrderFHM <- order
 						break ackWaitloop
 					case orderRecvAck := <-channels.OrderRecvAckTOM:
-						fmt.Printf("%#v\n", orderRecvAck)
 						if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
 							//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
 							if orderRecvAck.Floor == order.Floor && orderRecvAck.Dir == order.Dir {
 								ackCounter++
 							}
-							//If we only wait for ack from ourselves, we append the extra ackCount here
-							if order.PrimaryID == order.BackupID {
-								ackCounter++
-							}
 						}
 						if ackCounter == 2 {
 							//Transmit was successful
-							fmt.Println("Order transmit was successfull")
 							break ackWaitloop
 						}
 					}
 				}
 			}
-
 		}
 	}
 }
@@ -138,27 +131,31 @@ func ConfigureAndRunTest() {
 	fmt.Scan(&costValue)
 	fmt.Println("The cost value of this process is: ", costValue)
 
-	fmt.Println("Choose if Ack should fail (YES=1/NO=0)")
-	var fail string
-	fmt.Scan(&fail)
-	failSendingAck, _ = strconv.ParseBool(fail)
-	fmt.Println("Should the OrderRecvAck fail: ", failSendingAck)
 	for {
 		fmt.Println("Want to send dummy HW order?(y/n))")
 		var ans string
 		fmt.Scan(&ans)
 		if ans == "y" || ans == "" {
-			fmt.Println("Sending HW order")
 			var dummyOrder datatypes.SWOrder
-			dummyOrder.Floor = 2
-			dummyOrder.Dir = 1
-
+			fmt.Println("Floor: ")
+			fmt.Scan(&dummyOrder.Floor)
+			fmt.Println("Dir (1/-1):")
+			fmt.Scan(&dummyOrder.Dir)
+			fmt.Println("Sending HW order")
 			channels.OrderFHM <- dummyOrder
-		} else {
-			break
+		}
+		fmt.Println("Want to send dummy OrderComplete? (y/n))")
+		fmt.Scan(&ans)
+		if ans == "y" || ans == "" {
+			var dummyComplete datatypes.OrderComplete
+			fmt.Println("Floor: ")
+			fmt.Scan(&dummyComplete.Floor)
+			fmt.Println("Dir (1/-1):")
+			fmt.Scan(&dummyComplete.Dir)
+			fmt.Println("Sending OrderComplete")
+			channels.OrderCompleteFOM <- dummyComplete
 		}
 	}
-	fmt.Println("The configuration is done!")
 }
 
 func dummyCostAns(costreq datatypes.CostRequest) {
@@ -168,58 +165,98 @@ func dummyCostAns(costreq datatypes.CostRequest) {
 	channels.CostAnswerFOM <- costAns
 }
 
-func dummyOrderRecvAck(swOrder datatypes.SWOrder, fail bool) {
-	if !fail {
-		var orderRecvAck datatypes.OrderRecvAck
-		orderRecvAck.Dir = swOrder.Dir
-		orderRecvAck.Floor = swOrder.Floor
-		orderRecvAck.DestinationID = swOrder.SourceID
-		channels.OrderRecvAckFOM <- orderRecvAck
-	} else {
-		return
-	}
-}
-
-func dummyOrderCompleteRecv(orderComplete datatypes.OrderComplete) {
-	fmt.Printf("Recieved an orderComplete: %#v\n", orderComplete)
-}
-
-func dummyRegisterOrder(swOrder datatypes.SWOrder, primary bool) {
-	if primary {
-		fmt.Println("Registering order in Primary queue")
-	} else {
-		fmt.Println("Registering order in backup queue ")
-	}
-}
-
-func generateOrderRecvAck(swOrder datatypes.SWOrder) {
+func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
 	var orderRecvAck datatypes.OrderRecvAck
-	orderRecvAck.Dir = swOrder.Dir
-	orderRecvAck.Floor = swOrder.Floor
-	orderRecvAck.DestinationID = swOrder.SourceID
+	orderRecvAck.Dir = queueOrder.Dir
+	orderRecvAck.Floor = queueOrder.Floor
+	orderRecvAck.DestinationID = queueOrder.SourceID
 	channels.OrderRecvAckFOM <- orderRecvAck
+}
+
+func generateQueueOrder(order datatypes.SWOrder) datatypes.QueueOrder {
+	var queueOrder datatypes.QueueOrder
+	queueOrder.SourceID = order.SourceID
+	queueOrder.Dir = order.Dir
+	queueOrder.Floor = order.Floor
+	queueOrder.RegistrationTime = time.Now()
+	return queueOrder
 }
 
 func orderRegSW() {
 	for {
 		select {
 		case order := <-channels.SWOrderTOMPrimary:
-			fmt.Printf("Received Primary: %#v\n", order)
-			var primaryOrder datatypes.PrimaryOrder
-			primaryOrder.Floor = order.Floor
-			primaryOrder.Dir = order.Dir
-			primaryQueue = append(primaryQueue, primaryOrder)
-			logger.WriteLog(primaryQueue, "/logs/primaryqueue/")
-			generateOrderRecvAck(order)
+			queueOrder := generateQueueOrder(order)
+			primaryAppend <- queueOrder
 		case order := <-channels.SWOrderTOMBackup:
-			fmt.Printf("Received Backup: %#v\n", order)
-			var backupOrder datatypes.BackupOrder
-			backupOrder.Floor = order.Floor
-			backupOrder.Dir = order.Dir
-			backupOrder.RegistrationTime = time.Now()
+			queueOrder := generateQueueOrder(order)
+			backupAppend <- queueOrder
+		}
+	}
+}
+
+func removeFromQueue(order datatypes.QueueOrder, primary bool) {
+	var queue []datatypes.QueueOrder
+	switch primary {
+	case true:
+		queue = primaryQueue
+	case false:
+		queue = backupQueue
+	}
+
+	j := 0
+	for _, element := range queue {
+		if order.Floor != element.Floor {
+			queue[j] = element
+			j++
+		}
+	}
+
+	queue = queue[:j]
+	switch primary {
+	case true:
+		primaryQueue = queue
+	case false:
+		backupQueue = queue
+	}
+}
+
+func queueModifier() {
+	for {
+		select {
+		case primaryOrder := <-primaryAppend:
+			primary := true
+			primaryQueue = append(primaryQueue, primaryOrder)
+			logger.WriteLog(primaryQueue, primary, "/logs/")
+			generateOrderRecvAck(primaryOrder)
+		case primaryOrder := <-primaryRemove:
+			primary := true
+			removeFromQueue(primaryOrder, primary)
+			logger.WriteLog(primaryQueue, primary, "/logs/")
+		case backupOrder := <-backupAppend:
+			primary := false
 			backupQueue = append(backupQueue, backupOrder)
-			logger.WriteLog(backupQueue, "/logs/backupqueue/")
-			generateOrderRecvAck(order)
+			logger.WriteLog(backupQueue, primary, "/logs/")
+			generateOrderRecvAck(backupOrder)
+		case backupOrder := <-backupRemove:
+			primary := false
+			removeFromQueue(backupOrder, primary)
+			logger.WriteLog(backupQueue, primary, "/logs/")
+		}
+	}
+}
+
+func orderCompleteWatch() {
+	for {
+		select {
+		case orderComplete := <-channels.OrderCompleteTOM:
+			var queueOrder datatypes.QueueOrder
+			queueOrder.Dir = orderComplete.Dir
+			fmt.Println("Forwarding remove request to queueModifier")
+			queueOrder.Floor = orderComplete.Floor
+			primaryRemove <- queueOrder
+			backupRemove <- queueOrder
+			fmt.Println("The remove request has been handeled")
 		}
 	}
 }

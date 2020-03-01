@@ -65,7 +65,6 @@ func networkWatch() {
 	for {
 		time.Sleep(1000 * time.Millisecond)
 		theIP, err := localip.LocalIP()
-		//fmt.Println("NetworkWatch checking state, the IP is", theIP)
 		if err != nil {
 			if mode != datatypes.Localhost {
 				ip = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
@@ -85,6 +84,8 @@ func networkWatch() {
 }
 
 func createSignature(structType int) string {
+	//Delay the signing process by 1ms to guarantee unique signatures
+	time.Sleep(1 * time.Millisecond)
 	timeSinceStart := time.Since(start)
 	t := strconv.FormatInt(timeSinceStart.Nanoseconds()/1e6, 10)
 	senderIPStr := ip
@@ -126,35 +127,30 @@ func transmitter(port int) {
 	for {
 		select {
 		case order := <-SWOrderFOM:
-			fmt.Println("Transmit swOrder")
 			order.Signature = createSignature(0)
 			order.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				SWOrderTX <- order
 			}
 		case costReq := <-CostRequestFOM:
-			fmt.Println("Transmit costReq")
 			costReq.Signature = createSignature(1)
 			costReq.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostRequestTX <- costReq
 			}
 		case costAns := <-CostAnswerFOM:
-			fmt.Println("Transmit costAns")
 			costAns.Signature = createSignature(2)
 			costAns.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostAnswerTX <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
-			fmt.Println("Transmit orderRecvAck")
 			orderRecvAck.Signature = createSignature(3)
 			orderRecvAck.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteFOM:
-			fmt.Println("Transmit orderComplete")
 			orderComplete.Signature = createSignature(4)
 			for i := 0; i < packetduplicates; i++ {
 				OrderCompleteTX <- orderComplete
@@ -202,6 +198,8 @@ func receiver(port int) {
 			}
 		case orderComplete := <-OrderCompleteRX:
 			if !checkDuplicate(orderComplete.Signature) {
+				fmt.Println("Recieved orderComplete over network")
+				fmt.Printf("%#v\n", orderComplete)
 				OrderCompleteTOM <- orderComplete
 			}
 		case <-killReceiver:

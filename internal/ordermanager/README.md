@@ -28,4 +28,13 @@ The decision has been made to merge ordermanager and queuemanager under the orde
  * Set up routine to listen for incoming SW orders
  * Redirect these WS orders to primary or backup channel for registration in queuemanager - Deligated to Network Manager
  * Create queuestructs and arrays. Keep only necessary info in these structs - DONE
- * 
+ * Test logging queues - DONE 
+ 
+ ### TODO - Order complete watchers
+ * Utilize channels and help functions to avoid race conditions when modifying queues
+ * Change generateSignature in networkmanager to delay by 1 ms to guarantee unique signatures
+
+ ### TODO - Major midway testing
+ * Test sending orders and ordercompletes on one terminal on one computer - PASSED
+ * Test sending orders and ordercompletes on 3 terminals on one computer - PASSED
+ * Test sending order and ordercompletes on 3 PCs on the sanntidlab

@@ -30,7 +30,6 @@ func AssetsDir() string {
 
 func assetExists(assetsDir string, directory string, name string) bool {
 	path := filepath.Join(assetsDir, directory+name)
-	fmt.Println(path)
 	_, err := os.Stat(path)
 	if err != nil {
 		return false
@@ -40,52 +39,49 @@ func assetExists(assetsDir string, directory string, name string) bool {
 }
 
 //selectFileNames takes in an array and selects (writeFile,deleteFile/readFile)
-func selectFileNames(data interface{}, assetsDir string, directory string) (string, string) {
-	switch data.(type) {
-	case []datatypes.PrimaryOrder:
+func selectFileNames(data interface{}, primary bool, assetsDir string, directory string) (string, string) {
+	switch primary {
+	case true:
 		if assetExists(assetsDir, directory, primaryv1) {
 			return primaryv2, primaryv1
 		}
 		return primaryv1, primaryv2
-	case []datatypes.BackupOrder:
+	case false:
 		if assetExists(assetsDir, directory, backupv1) {
 			return backupv2, backupv1
 		}
 		return backupv1, backupv2
 	default:
-		fmt.Println("Running default case")
 		return "DefaultWrite.json", "DefaultDelete.json"
 	}
 }
 
-func WriteLog(data interface{}, directory string) {
+func WriteLog(data interface{}, primary bool, directory string) {
 	assetsDir := AssetsDir()
-	fmt.Println("Assets dir: ", assetsDir)
 	result, err := json.MarshalIndent(data, "", "")
 	if err != nil {
 		fmt.Println(err)
 	}
 	if _, err := os.Stat(filepath.Join(assetsDir, directory)); os.IsNotExist(err) {
-		fmt.Println("Making dir: ", filepath.Join(assetsDir, directory))
 		err := os.MkdirAll(filepath.Join(assetsDir, directory), 0755)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
-	writefile, deletefile := selectFileNames(data, assetsDir, directory)
+	writefile, deletefile := selectFileNames(data, primary, assetsDir, directory)
 	err = ioutil.WriteFile(filepath.Join(AssetsDir(), directory)+writefile, result, 0644)
 	if err != nil {
 		fmt.Println(err)
 	}
 	err = os.Remove(filepath.Join(AssetsDir(), directory) + deletefile)
 	if err != nil {
-		fmt.Println(err)
+		//fmt.Println(err)
 	}
 }
 
-func ReadLogQueue(data *[]datatypes.SWOrder, directory string) {
+func ReadLogQueue(data *[]datatypes.SWOrder, primary bool, directory string) {
 	assetsDir := AssetsDir()
-	_, readFile := selectFileNames(*data, assetsDir, directory)
+	_, readFile := selectFileNames(*data, primary, assetsDir, directory)
 	file, _ := ioutil.ReadFile(filepath.Join(assetsDir, directory) + readFile)
 	_ = json.Unmarshal([]byte(file), data)
 }

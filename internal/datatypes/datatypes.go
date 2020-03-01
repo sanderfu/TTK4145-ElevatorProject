@@ -78,12 +78,8 @@ const (
 	Localhost NWMMode = 1
 )
 
-type PrimaryOrder struct {
-	Floor Floor
-	Dir   Direction
-}
-
-type BackupOrder struct {
+type QueueOrder struct {
+	SourceID         string
 	Floor            Floor
 	Dir              Direction
 	RegistrationTime time.Time
