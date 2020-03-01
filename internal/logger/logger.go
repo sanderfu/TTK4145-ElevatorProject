@@ -16,6 +16,9 @@ import (
 const (
 	primaryv1 = "/primaryv1.json"
 	primaryv2 = "/primaryv2.json"
+
+	backupv1 = "/backupv1.json"
+	backupv2 = "/backupv2.json"
 )
 
 func AssetsDir() string {
@@ -38,16 +41,17 @@ func assetExists(assetsDir string, directory string, name string) bool {
 
 //selectFileNames takes in an array and selects (writeFile,deleteFile/readFile)
 func selectFileNames(data interface{}, assetsDir string, directory string) (string, string) {
-	fmt.Printf("%T\n", data)
 	switch data.(type) {
 	case []datatypes.PrimaryOrder:
 		if assetExists(assetsDir, directory, primaryv1) {
-			fmt.Println("Primaryv1 exists, want to write primaryv2 and delete primary v1")
-			fmt.Println("Writefile filename: ", primaryv2)
 			return primaryv2, primaryv1
 		}
-		fmt.Println("Writefile filename: ", primaryv1)
 		return primaryv1, primaryv2
+	case []datatypes.BackupOrder:
+		if assetExists(assetsDir, directory, backupv1) {
+			return backupv2, backupv1
+		}
+		return backupv1, backupv2
 	default:
 		fmt.Println("Running default case")
 		return "DefaultWrite.json", "DefaultDelete.json"

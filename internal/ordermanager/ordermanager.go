@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
+
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
@@ -23,7 +25,8 @@ var costValue = 5
 
 var start time.Time
 
-var startRegistration = make(chan struct{}, 1)
+var primaryQueue []datatypes.PrimaryOrder
+var backupQueue []datatypes.BackupOrder
 
 //OrderManager ...
 func OrderManager() {
@@ -189,17 +192,34 @@ func dummyRegisterOrder(swOrder datatypes.SWOrder, primary bool) {
 	}
 }
 
+func generateOrderRecvAck(swOrder datatypes.SWOrder) {
+	var orderRecvAck datatypes.OrderRecvAck
+	orderRecvAck.Dir = swOrder.Dir
+	orderRecvAck.Floor = swOrder.Floor
+	orderRecvAck.DestinationID = swOrder.SourceID
+	channels.OrderRecvAckFOM <- orderRecvAck
+}
+
 func orderRegSW() {
 	for {
 		select {
 		case order := <-channels.SWOrderTOMPrimary:
 			fmt.Printf("Received Primary: %#v\n", order)
-			dummyRegisterOrder(order, true)
-			dummyOrderRecvAck(order, failSendingAck)
+			var primaryOrder datatypes.PrimaryOrder
+			primaryOrder.Floor = order.Floor
+			primaryOrder.Dir = order.Dir
+			primaryQueue = append(primaryQueue, primaryOrder)
+			logger.WriteLog(primaryQueue, "/logs/primaryqueue/")
+			generateOrderRecvAck(order)
 		case order := <-channels.SWOrderTOMBackup:
 			fmt.Printf("Received Backup: %#v\n", order)
-			dummyRegisterOrder(order, false)
-			dummyOrderRecvAck(order, failSendingAck)
+			var backupOrder datatypes.BackupOrder
+			backupOrder.Floor = order.Floor
+			backupOrder.Dir = order.Dir
+			backupOrder.RegistrationTime = time.Now()
+			backupQueue = append(backupQueue, backupOrder)
+			logger.WriteLog(backupQueue, "/logs/backupqueue/")
+			generateOrderRecvAck(order)
 		}
 	}
 }

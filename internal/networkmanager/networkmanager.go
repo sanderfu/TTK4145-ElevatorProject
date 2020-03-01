@@ -112,15 +112,6 @@ func cleanArray() {
 	recentSignatures = recentSignatures[:len(recentSignatures)-removeinclean]
 }
 
-//TestSignatures tests that the signature system works as intended
-func TestSignatures() {
-	for i := 0; i < maxuniquesignatures*2; i++ {
-		sign1 := createSignature(i)
-		checkDuplicate(sign1)
-		printRecentSignatures()
-	}
-}
-
 func printRecentSignatures() {
 	fmt.Println("")
 	fmt.Println("Recentsignatures:")
@@ -181,14 +172,13 @@ func receiver(port int) {
 	for {
 		select {
 		case order := <-SWOrderRX:
-			if ip != order.PrimaryID && ip != order.BackupID {
-				//We are not part of this order, ignore it
-				continue
-			}
 			if !checkDuplicate(order.Signature) {
-				if order.PrimaryID == ip {
+				if order.PrimaryID == ip && order.BackupID == ip {
 					SWOrderTOMPrimary <- order
-				} else {
+					SWOrderTOMBackup <- order
+				} else if order.PrimaryID == ip {
+					SWOrderTOMPrimary <- order
+				} else if order.BackupID == ip {
 					SWOrderTOMBackup <- order
 				}
 			}
@@ -218,30 +208,6 @@ func receiver(port int) {
 			KillDriverRX <- struct{}{}
 			initReceiver <- struct{}{}
 			return
-		}
-	}
-}
-
-//TestSending Function to test basic order transmission over network
-func TestSending() {
-	for {
-		var testOrdre datatypes.SWOrder
-		testOrdre.PrimaryID = "12345"
-		testOrdre.BackupID = "67890"
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderTX <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-}
-
-//TestRecieving Function to test basic order transmission over network
-func TestRecieving() {
-	for {
-		select {
-		case order := <-SWOrderRX:
-			fmt.Printf("Received: %#v\n", order)
-
 		}
 	}
 }

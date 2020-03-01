@@ -25,7 +25,7 @@ The decision has been made to merge ordermanager and queuemanager under the orde
  * Repeat same test on 3 PCs ont he sanntidssal w. packet loss 20% - PASSED
 
 ### TODO - SW Order Registration
- * Set up primary and backup channel to QM (Queue manager) from Order manager.
  * Set up routine to listen for incoming SW orders
- * Redirect these WS orders to primary or backup channel for registration in queuemanager
- * Set up waitloop
+ * Redirect these WS orders to primary or backup channel for registration in queuemanager - Deligated to Network Manager
+ * Create queuestructs and arrays. Keep only necessary info in these structs - DONE
+ * 

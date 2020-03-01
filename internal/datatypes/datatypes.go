@@ -1,5 +1,7 @@
 package datatypes
 
+import "time"
+
 // Datatypes goes here
 
 //Basic types
@@ -75,3 +77,14 @@ const (
 	Network   NWMMode = 0
 	Localhost NWMMode = 1
 )
+
+type PrimaryOrder struct {
+	Floor Floor
+	Dir   Direction
+}
+
+type BackupOrder struct {
+	Floor            Floor
+	Dir              Direction
+	RegistrationTime time.Time
+}
