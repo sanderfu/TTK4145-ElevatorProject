@@ -1,6 +1,7 @@
 package datatypes
 
 // Datatypes goes here
+//TODO: Fix everything to be CamelCase
 
 //Basic types
 type Floor int
@@ -14,10 +15,18 @@ const (
 	FOURTH Floor = 3
 )
 
+// Change these to match with values from elevator_io (just for simplicity)
+// Martin thinks this works. TODO: Fix this comment
 const (
-	UP     Direction = 1
-	DOWN   Direction = -1
-	INSIDE Direction = 0
+	UP     Direction = 0
+	DOWN   Direction = 1
+	INSIDE Direction = 2
+)
+
+const (
+	MotorUp   Direction = 1
+	MotorDown Direction = -1
+	MotorStop Direction = 0
 )
 
 const ()
