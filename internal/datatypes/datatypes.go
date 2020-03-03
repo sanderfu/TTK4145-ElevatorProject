@@ -22,6 +22,12 @@ const (
 	INSIDE Direction = 2
 )
 
+const (
+	MotorUp   Direction = 1
+	MotorDown Direction = -1
+	MotorStop Direction = 0
+)
+
 //Struct types
 
 type Cost_request struct {

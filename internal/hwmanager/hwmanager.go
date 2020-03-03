@@ -2,20 +2,25 @@ package hwmanager
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/TTK4145/driver-go/elevio"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
-func Init() {
+var totalFloors int
+
+func Init(numFloors int) {
 	// TODO: Find out if this function should take addr and numFloors as args
 	addr := "192.168.0.163:15657"
-	numFloors := 4
+	totalFloors = numFloors
 
 	elevio.Init(addr, numFloors)
+	SetAllLights(false)
 
 	go fsmMock()
 	go omMock()
+
 }
 
 func PollCurrentFloor(curFloorChan chan<- datatypes.Floor) {
@@ -51,30 +56,31 @@ func PollHWORder(hwOrderChan chan<- datatypes.HW_Order) {
 	}
 }
 
-func SetOrderComplete(completedOrder datatypes.Order_complete) {
-
-	fmt.Println("Got Order Complete message from Order Manager")
-	elevio.SetButtonLamp(elevio.ButtonType(completedOrder.Dir),
-		int(completedOrder.Floor), false)
-
+func SetLight(element datatypes.HW_Order, value bool) {
+	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
+		value)
 }
 
-func convertOrderDirToMotorDir(dir datatypes.Direction) datatypes.Direction {
-	switch dir {
-	case datatypes.UP:
-		dir = 1
-	case datatypes.DOWN:
-		dir = -1
-	case datatypes.INSIDE:
-		dir = 0
+func SetAllLights(value bool) {
+	for floor := 0; floor < totalFloors; floor++ {
+		for btn := elevio.BT_HallUp; btn <= elevio.BT_Cab; btn++ {
+			if !(floor == 0 && btn == elevio.BT_HallDown) &&
+				!(floor == totalFloors-1 && btn == elevio.BT_HallUp) {
+				elevio.SetButtonLamp(btn, floor, value)
+			}
+		}
 	}
-	return dir
+}
+
+func SetElevatorDirection(dir datatypes.Direction) {
+	elevio.SetMotorDirection(elevio.MotorDirection(dir))
 }
 
 // Mocks below
 
 func fsmMock() {
 	go fsmPollFloorMock()
+	go fsmSetElevatorDirectionMock()
 }
 
 func fsmPollFloorMock() {
@@ -90,12 +96,17 @@ func fsmPollFloorMock() {
 	}
 }
 
-//func fsmSetDirectionMock() {
-//
-//	for {
-//
-//	}
-//}
+func fsmSetElevatorDirectionMock() {
+
+	// Simulate an arbitrary sequence to see that directions are set correctly
+	SetElevatorDirection(datatypes.MotorUp)
+	time.Sleep(time.Second * 3)
+	SetElevatorDirection(datatypes.MotorStop)
+	time.Sleep(time.Second * 3)
+	SetElevatorDirection(datatypes.MotorDown)
+	time.Sleep(time.Second * 3)
+	SetElevatorDirection(datatypes.MotorStop)
+}
 
 func omMock() {
 	go omMockGetHWOrders()
@@ -112,5 +123,19 @@ func omMockGetHWOrders() {
 		hwOrder := <-hwOrderChan
 
 		fmt.Println("HW Order: Floor", hwOrder.Floor, "Direction:", hwOrder.Dir)
+
+		// Turn off that order again
+		go omMockLightControl(hwOrder)
 	}
+}
+
+func omMockLightControl(order datatypes.HW_Order) {
+
+	// Set that light on
+	SetLight(order, true)
+
+	time.Sleep(time.Second * 3)
+
+	SetLight(order, false)
+
 }

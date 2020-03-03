@@ -15,7 +15,7 @@ import (
 func main() {
 	fmt.Println("Starting HW Manager")
 
-	hwmanager.Init()
+	hwmanager.Init(4)
 
 	for {
 
