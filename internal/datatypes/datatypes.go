@@ -1,5 +1,7 @@
 package datatypes
 
+import "time"
+
 // Datatypes goes here
 //TODO: Fix everything to be CamelCase
 
@@ -36,20 +38,22 @@ const ()
 //  will be received as zero-values over the network.
 
 type CostRequest struct {
-	Signature string
-	SourceID  string
+	Signature string //Used by networkmanager to remove duplicates
+	SourceID  string //ID of sender, to direct answer back.
 	Floor     Floor
 	Direction Direction
 }
 
 type CostAnswer struct {
-	Signature string
-	SourceID  string
-	CostValue float64
+	Signature     string //Used by networkmanager to remove duplicates
+	SourceID      string //ID of answer sender.
+	DestinationID string //ID of answer receiver
+	CostValue     int
 }
 
 type SWOrder struct {
 	Signature string
+	SourceID  string
 	PrimaryID string
 	BackupID  string
 	Floor     Floor
@@ -57,13 +61,20 @@ type SWOrder struct {
 }
 
 type OrderRecvAck struct {
+	Signature     string
+	SourceID      string
+	DestinationID string
+	Floor         Floor
+	Dir           Direction
+}
+
+type OrderComplete struct {
 	Signature string
-	SourceID  string
 	Floor     Floor
 	Dir       Direction
 }
 
-type OrderComplete struct {
+type LightCommand struct {
 	Signature string
 	Floor     Floor
 	Dir       Direction
@@ -75,3 +86,10 @@ const (
 	Network   NWMMode = 0
 	Localhost NWMMode = 1
 )
+
+type QueueOrder struct {
+	SourceID         string
+	Floor            Floor
+	Dir              Direction
+	RegistrationTime time.Time
+}

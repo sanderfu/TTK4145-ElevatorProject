@@ -1,7 +1,6 @@
 package networkmanager
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"strconv"
@@ -50,6 +49,7 @@ func NetworkManager() {
 	InitDriverRX <- struct{}{}
 	mode = datatypes.Network
 	ip, _ = localip.LocalIP()
+	ip += ":" + strconv.Itoa(os.Getpid())
 
 	for {
 		select {
@@ -65,17 +65,16 @@ func networkWatch() {
 	for {
 		time.Sleep(1000 * time.Millisecond)
 		theIP, err := localip.LocalIP()
-		fmt.Println("NetworkWatch checking state, the IP is", theIP)
 		if err != nil {
 			if mode != datatypes.Localhost {
-				ip = "LOCALHOST"
+				ip = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
 				killTransmitter <- struct{}{}
 				killReceiver <- struct{}{}
 			}
 		} else {
 			if mode != datatypes.Network {
-				ip = theIP
+				ip = theIP + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
 				killTransmitter <- struct{}{}
 				killReceiver <- struct{}{}
@@ -85,6 +84,8 @@ func networkWatch() {
 }
 
 func createSignature(structType int) string {
+	//Delay the signing process by 1ms to guarantee unique signatures
+	time.Sleep(1 * time.Millisecond)
 	timeSinceStart := time.Since(start)
 	t := strconv.FormatInt(timeSinceStart.Nanoseconds()/1e6, 10)
 	senderIPStr := ip
@@ -112,15 +113,6 @@ func cleanArray() {
 	recentSignatures = recentSignatures[:len(recentSignatures)-removeinclean]
 }
 
-//TestSignatures tests that the signature system works as intended
-func TestSignatures() {
-	for i := 0; i < maxuniquesignatures*2; i++ {
-		sign1 := createSignature(i)
-		checkDuplicate(sign1)
-		printRecentSignatures()
-	}
-}
-
 func printRecentSignatures() {
 	fmt.Println("")
 	fmt.Println("Recentsignatures:")
@@ -136,21 +128,25 @@ func transmitter(port int) {
 		select {
 		case order := <-SWOrderFOM:
 			order.Signature = createSignature(0)
+			order.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				SWOrderTX <- order
 			}
 		case costReq := <-CostRequestFOM:
 			costReq.Signature = createSignature(1)
+			costReq.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostRequestTX <- costReq
 			}
 		case costAns := <-CostAnswerFOM:
 			costAns.Signature = createSignature(2)
+			costAns.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				CostAnswerTX <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
 			orderRecvAck.Signature = createSignature(3)
+			orderRecvAck.SourceID = ip
 			for i := 0; i < packetduplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
@@ -173,22 +169,37 @@ func receiver(port int) {
 		select {
 		case order := <-SWOrderRX:
 			if !checkDuplicate(order.Signature) {
-				SWOrderTOM <- order
+				if order.PrimaryID == ip && order.BackupID == ip {
+					SWOrderTOMPrimary <- order
+					SWOrderTOMBackup <- order
+				} else if order.PrimaryID == ip {
+					SWOrderTOMPrimary <- order
+				} else if order.BackupID == ip {
+					SWOrderTOMBackup <- order
+				}
 			}
 		case costReq := <-CostRequestRX:
 			if !checkDuplicate(costReq.Signature) {
 				CostRequestTOM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
+			if costAns.DestinationID != ip {
+				continue
+			}
 			if !checkDuplicate(costAns.Signature) {
 				CostAnswerTOM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:
+			if orderRecvAck.DestinationID != ip {
+				continue
+			}
 			if !checkDuplicate(orderRecvAck.Signature) {
 				OrderRecvAckTOM <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteRX:
 			if !checkDuplicate(orderComplete.Signature) {
+				fmt.Println("Recieved orderComplete over network")
+				fmt.Printf("%#v\n", orderComplete)
 				OrderCompleteTOM <- orderComplete
 			}
 		case <-killReceiver:
@@ -197,83 +208,4 @@ func receiver(port int) {
 			return
 		}
 	}
-}
-
-//TestSending Function to test basic order transmission over network
-func TestSending() {
-	for {
-		var testOrdre datatypes.SWOrder
-		testOrdre.PrimaryID = "12345"
-		testOrdre.BackupID = "67890"
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderTX <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-}
-
-//TestRecieving Function to test basic order transmission over network
-func TestRecieving() {
-	for {
-		select {
-		case order := <-SWOrderRX:
-			fmt.Printf("Received: %#v\n", order)
-
-		}
-	}
-}
-
-//TestSendingRedundant Function to test transmitting redundancy measures to packet loss.
-func TestSendingRedundant(ordersToSend int) {
-	//Create dummy order from order manager
-	reader := bufio.NewReader(os.Stdin)
-	fmt.Printf("Hit enter to start sending %v SW from 'Order Manager'", ordersToSend)
-	text, _ := reader.ReadString('\n')
-	fmt.Println(text)
-	for i := 0; i < ordersToSend; i++ {
-		fmt.Printf("Sending order %v\n", i)
-		var testOrdre datatypes.SWOrder
-		testOrdre.PrimaryID = "RedundantPackage"
-		testOrdre.BackupID = strconv.Itoa(i)
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderFOM <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-
-	for i := 0; i < ordersToSend; i++ {
-		fmt.Printf("Sending order %v\n", i)
-		var testOrdre datatypes.SWOrder
-		testOrdre.Signature = createSignature(0)
-		testOrdre.PrimaryID = "NonRedundantPackage"
-		testOrdre.BackupID = strconv.Itoa(i)
-		testOrdre.Dir = datatypes.INSIDE
-		testOrdre.Floor = datatypes.SECOND
-		SWOrderTX <- testOrdre
-		time.Sleep(1 * time.Second)
-	}
-
-}
-
-//TestReceivingRedundant Function to test that order manager gets unique packages only
-func TestReceivingRedundant(runtime time.Duration) {
-	countRedundant := 0
-	countNonRedundant := 0
-	done := time.After(runtime * time.Second)
-readLoop:
-	for {
-		select {
-		case order := <-SWOrderTOM:
-			if order.PrimaryID == "RedundantPackage" {
-				countRedundant++
-			} else if order.PrimaryID == "NonRedundantPackage" {
-				countNonRedundant++
-			}
-			fmt.Printf("Received: %#v\n", order)
-		case <-done:
-			break readLoop
-		}
-	}
-	fmt.Printf("Test results:\n Unique RedundantPackages received: %v\n Unique NonRedundantPackages received %v\n", countRedundant, countNonRedundant)
-	printRecentSignatures()
 }

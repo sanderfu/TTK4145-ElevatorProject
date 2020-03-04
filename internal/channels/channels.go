@@ -32,32 +32,35 @@ var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComp
 //OrderCompleteRX ...
 var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
-//SWOrderTOM channel from Network Manager to Order Manager
-var SWOrderTOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+//SWOrderTOMPrimary channel for delivering primary orders to Order Manager from Network Manager
+var SWOrderTOMPrimary chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+
+//SWOrderTOMBackup is channel for delivering backup orders to Order Manager from Network manager
+var SWOrderTOMBackup chan datatypes.SWOrder = make(chan datatypes.SWOrder)
 
 //SWOrderFOM channel from Order Manager to Network Manager
 var SWOrderFOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
 
 //CostRequestTOM ...
-var CostRequestTOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
+var CostRequestTOM chan datatypes.CostRequest = make(chan datatypes.CostRequest, 10)
 
 //CostRequestFOM ...
 var CostRequestFOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
 
 //CostAnswerTOM ...
-var CostAnswerTOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
+var CostAnswerTOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer, 10)
 
 //CostAnswerFOM ...
 var CostAnswerFOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
 
 //OrderRecvAckTOM ...
-var OrderRecvAckTOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
+var OrderRecvAckTOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck, 10)
 
 //OrderRecvAckFOM ...
 var OrderRecvAckFOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
 
 //OrderCompleteTOM ...
-var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)
 
 //OrderCompleteFOM ...
 var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
@@ -66,3 +69,8 @@ var KillDriverTX = make(chan struct{}, 1)
 var KillDriverRX = make(chan struct{}, 1)
 var InitDriverTX = make(chan struct{}, 1)
 var InitDriverRX = make(chan struct{}, 1)
+
+//Order manager
+
+//OrderFHM delivers orders from Hardware Manager to Order Manager
+var OrderFHM chan datatypes.SWOrder = make(chan datatypes.SWOrder, 10)
