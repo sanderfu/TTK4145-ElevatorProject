@@ -74,3 +74,5 @@ var InitDriverRX = make(chan struct{}, 1)
 
 //OrderFHM delivers orders from Hardware Manager to Order Manager
 var OrderFHM chan datatypes.Order = make(chan datatypes.Order, 10)
+
+var CurrentFloorTFSM chan datatypes.Floor = make(chan datatypes.Floor)

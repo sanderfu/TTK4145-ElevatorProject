@@ -260,3 +260,20 @@ func orderCompleteWatch() {
 		}
 	}
 }
+
+func PeekFirstOrderInQueue(order *datatypes.QueueOrder) {
+
+	if len(primaryQueue) > 0 {
+		*order = primaryQueue[0]
+		return
+	}
+	order = nil
+
+	//var dummyOrder datatypes.QueueOrder
+	//dummyOrder.Dir = datatypes.DOWN
+	//dummyOrder.Floor = datatypes.FOURTH
+
+	//*order = dummyOrder
+}
+
+// TODO: Make function for checking if elevator should stop at floor

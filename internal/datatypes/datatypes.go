@@ -9,6 +9,7 @@ import "time"
 type Floor int
 type Direction int
 type StructType int
+type State int
 
 const (
 	FIRST  Floor = 0
@@ -31,7 +32,11 @@ const (
 	MotorStop Direction = 0
 )
 
-const ()
+const (
+	IdleState     State = 0
+	MovingState   State = 1
+	DoorOpenState State = 2
+)
 
 //Struct types
 // Note that all members we want to transmit must be public. Any private members

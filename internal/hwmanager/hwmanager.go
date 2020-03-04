@@ -25,7 +25,7 @@ func Init(numFloors int) {
 	elevio.Init(addr, numFloors)
 	SetAllLights(false)
 
-	go fsmMock()
+	//go fsmMock()
 	go omMock()
 
 }
@@ -81,6 +81,10 @@ func SetAllLights(value bool) {
 
 func SetElevatorDirection(dir datatypes.Direction) {
 	elevio.SetMotorDirection(elevio.MotorDirection(dir))
+}
+
+func SetDoorOpenLamp(value bool) {
+	elevio.SetDoorOpenLamp(value)
 }
 
 // Mocks below
