@@ -15,6 +15,7 @@ const (
 	answerWaitMS       = 250
 	orderRecvAckWaitMS = 250
 	maxCost            = 10
+	backupWaitS        = 10
 )
 
 //Test variables
@@ -44,6 +45,7 @@ func OrderManager() {
 	go orderRegSW()
 	go queueModifier()
 	go orderCompleteWatch()
+	go backupWatch()
 
 }
 
@@ -59,65 +61,62 @@ func receiver() {
 
 func orderRegHW() {
 	for {
-		select {
-		case order := <-channels.OrderFHM:
-			{
-				//Make cost request
-				var request datatypes.CostRequest
-				request.Direction = order.Dir
-				request.Floor = order.Floor
+		order := <-channels.OrderFHM
 
-				//Broadcast cost request
-				channels.CostRequestFOM <- request
+		//Make cost request
+		var request datatypes.CostRequest
+		request.Direction = order.Dir
+		request.Floor = order.Floor
 
-				//Wait for answers
-				done := time.After(answerWaitMS * time.Millisecond)
-				primaryCost := maxCost + 1
-				backupCost := maxCost + 1
-			costWaitloop:
-				for {
-					select {
-					case <-done:
-						break costWaitloop
-					case costAns := <-channels.CostAnswerTOM:
-						if costAns.CostValue < primaryCost {
-							backupCost = primaryCost
-							primaryCost = costAns.CostValue
-							order.BackupID = order.PrimaryID
-							order.PrimaryID = costAns.SourceID
-						} else if costAns.CostValue < backupCost {
-							backupCost = costAns.CostValue
-							order.BackupID = costAns.SourceID
-						}
-					}
-				}
-				//Handle situation with no backup
-				if backupCost == maxCost+1 {
+		//Broadcast cost request
+		channels.CostRequestFOM <- request
+
+		//Wait for answers
+		done := time.After(answerWaitMS * time.Millisecond)
+		primaryCost := maxCost + 1
+		backupCost := maxCost + 1
+	costWaitloop:
+		for {
+			select {
+			case <-done:
+				break costWaitloop
+			case costAns := <-channels.CostAnswerTOM:
+				if costAns.CostValue < primaryCost {
+					backupCost = primaryCost
+					primaryCost = costAns.CostValue
 					order.BackupID = order.PrimaryID
+					order.PrimaryID = costAns.SourceID
+				} else if costAns.CostValue < backupCost {
+					backupCost = costAns.CostValue
+					order.BackupID = costAns.SourceID
 				}
-				channels.SWOrderFOM <- order
-				//Wait for OrderRecAck from primary and backup
-				done2 := time.After(orderRecvAckWaitMS * time.Millisecond)
-				ackCounter := 0
-			ackWaitloop:
-				for {
-					select {
-					case <-done2:
-						//Timer reached end, the order transmit is assumed to have failed and order is put back into the channel
-						channels.OrderFHM <- order
-						break ackWaitloop
-					case orderRecvAck := <-channels.OrderRecvAckTOM:
-						if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
-							//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
-							if orderRecvAck.Floor == order.Floor && orderRecvAck.Dir == order.Dir {
-								ackCounter++
-							}
-						}
-						if ackCounter == 2 {
-							//Transmit was successful
-							break ackWaitloop
-						}
+			}
+		}
+		//Handle situation with no backup
+		if backupCost == maxCost+1 {
+			order.BackupID = order.PrimaryID
+		}
+		channels.SWOrderFOM <- order
+		//Wait for OrderRecAck from primary and backup
+		done2 := time.After(orderRecvAckWaitMS * time.Millisecond)
+		ackCounter := 0
+	ackWaitloop:
+		for {
+			select {
+			case <-done2:
+				//Timer reached end, the order transmit is assumed to have failed and order is put back into the channel
+				channels.OrderFHM <- order
+				break ackWaitloop
+			case orderRecvAck := <-channels.OrderRecvAckTOM:
+				if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
+					//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
+					if orderRecvAck.Floor == order.Floor && orderRecvAck.Dir == order.Dir {
+						ackCounter++
 					}
+				}
+				if ackCounter == 2 {
+					//Transmit was successful
+					break ackWaitloop
 				}
 			}
 		}
@@ -221,23 +220,45 @@ func removeFromQueue(order datatypes.QueueOrder, primary bool) {
 	}
 }
 
+func orderInQueue(order datatypes.QueueOrder, primary bool) bool {
+	switch primary {
+	case true:
+		for _, elem := range primaryQueue {
+			if elem.Floor == order.Floor && elem.Dir == order.Dir {
+				return true
+			}
+		}
+	case false:
+		for _, elem := range backupQueue {
+			if elem.Floor == order.Floor && elem.Dir == order.Dir {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func queueModifier() {
 	for {
 		select {
 		case primaryOrder := <-primaryAppend:
 			primary := true
-			primaryQueue = append(primaryQueue, primaryOrder)
-			logger.WriteLog(primaryQueue, primary, "/logs/")
-			generateOrderRecvAck(primaryOrder)
+			if !orderInQueue(primaryOrder, primary) {
+				primaryQueue = append(primaryQueue, primaryOrder)
+				logger.WriteLog(primaryQueue, primary, "/logs/")
+				generateOrderRecvAck(primaryOrder)
+			}
 		case primaryOrder := <-primaryRemove:
 			primary := true
 			removeFromQueue(primaryOrder, primary)
 			logger.WriteLog(primaryQueue, primary, "/logs/")
 		case backupOrder := <-backupAppend:
 			primary := false
-			backupQueue = append(backupQueue, backupOrder)
-			logger.WriteLog(backupQueue, primary, "/logs/")
-			generateOrderRecvAck(backupOrder)
+			if !orderInQueue(backupOrder, primary) {
+				backupQueue = append(backupQueue, backupOrder)
+				logger.WriteLog(backupQueue, primary, "/logs/")
+				generateOrderRecvAck(backupOrder)
+			}
 		case backupOrder := <-backupRemove:
 			primary := false
 			removeFromQueue(backupOrder, primary)
@@ -248,15 +269,27 @@ func queueModifier() {
 
 func orderCompleteWatch() {
 	for {
-		select {
-		case orderComplete := <-channels.OrderCompleteTOM:
-			var queueOrder datatypes.QueueOrder
-			queueOrder.Dir = orderComplete.Dir
-			fmt.Println("Forwarding remove request to queueModifier")
-			queueOrder.Floor = orderComplete.Floor
-			primaryRemove <- queueOrder
-			backupRemove <- queueOrder
-			fmt.Println("The remove request has been handeled")
+		orderComplete := <-channels.OrderCompleteTOM
+		var queueOrder datatypes.QueueOrder
+		queueOrder.Dir = orderComplete.Dir
+		fmt.Println("Forwarding remove request to queueModifier")
+		queueOrder.Floor = orderComplete.Floor
+		primaryRemove <- queueOrder
+		backupRemove <- queueOrder
+		fmt.Println("The remove request has been handeled")
+
+	}
+}
+
+func backupWatch() {
+	for {
+		for _, elem := range backupQueue {
+			if time.Since(elem.RegistrationTime) > backupWaitS*time.Second {
+				fmt.Printf("Backup element timed out\n#%v\n", elem)
+				backupRemove <- elem
+				primaryAppend <- elem
+			}
 		}
+		time.Sleep(1 * time.Second)
 	}
 }
