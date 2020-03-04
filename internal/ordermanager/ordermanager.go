@@ -254,11 +254,9 @@ func queueModifier() {
 			logger.WriteLog(primaryQueue, primary, "/logs/")
 		case backupOrder := <-backupAppend:
 			primary := false
-			if !orderInQueue(backupOrder, primary) {
-				backupQueue = append(backupQueue, backupOrder)
-				logger.WriteLog(backupQueue, primary, "/logs/")
-				generateOrderRecvAck(backupOrder)
-			}
+			backupQueue = append(backupQueue, backupOrder)
+			logger.WriteLog(backupQueue, primary, "/logs/")
+			generateOrderRecvAck(backupOrder)
 		case backupOrder := <-backupRemove:
 			primary := false
 			removeFromQueue(backupOrder, primary)
@@ -292,4 +290,10 @@ func backupWatch() {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func generateCost(order datatypes.Order) int {
+	cost := 2*len(primaryQueue) + 1*len(backupQueue)
+
+	return cost
 }

@@ -39,4 +39,5 @@ The decision has been made to merge ordermanager and queuemanager under the orde
  * Test sending orders and ordercompletes on 3 terminals on one computer - PASSED
  * Test sending order and ordercompletes on 3 PCs on the sanntidlab with 20% packet loss - PASSED
 
- 
+ ### TODO - Generate Cost
+ * Let cost value be defined by length of primary queue, with reduction for each element in queue that matches Floor. Further advancements will be made. 
