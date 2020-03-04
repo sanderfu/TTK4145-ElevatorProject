@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/TTK4145/Network-go/network/localip"
 	"github.com/TTK4145/driver-go/elevio"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
@@ -12,7 +13,13 @@ var totalFloors int
 
 func Init(numFloors int) {
 	// TODO: Find out if this function should take addr and numFloors as args
-	addr := "192.168.0.163:15657"
+	addr, err := localip.LocalIP()
+
+	if err != nil {
+		fmt.Println("Error: hwmanager (Init):", err)
+	}
+
+	addr += ":15657"
 	totalFloors = numFloors
 
 	elevio.Init(addr, numFloors)
