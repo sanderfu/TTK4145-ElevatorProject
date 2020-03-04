@@ -3,10 +3,10 @@ package channels
 import "github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 
 //SWOrderTX for transmitting to network via driver
-var SWOrderTX chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+var SWOrderTX chan datatypes.Order = make(chan datatypes.Order)
 
 //SWOrderRX for recieveing from network via driver
-var SWOrderRX chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+var SWOrderRX chan datatypes.Order = make(chan datatypes.Order)
 
 //CostRequestTX for transmitting to network via driver
 var CostRequestTX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
@@ -33,13 +33,13 @@ var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComp
 var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
 //SWOrderTOMPrimary channel for delivering primary orders to Order Manager from Network Manager
-var SWOrderTOMPrimary chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+var SWOrderTOMPrimary chan datatypes.Order = make(chan datatypes.Order)
 
 //SWOrderTOMBackup is channel for delivering backup orders to Order Manager from Network manager
-var SWOrderTOMBackup chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+var SWOrderTOMBackup chan datatypes.Order = make(chan datatypes.Order)
 
 //SWOrderFOM channel from Order Manager to Network Manager
-var SWOrderFOM chan datatypes.SWOrder = make(chan datatypes.SWOrder)
+var SWOrderFOM chan datatypes.Order = make(chan datatypes.Order)
 
 //CostRequestTOM ...
 var CostRequestTOM chan datatypes.CostRequest = make(chan datatypes.CostRequest, 10)
@@ -73,4 +73,4 @@ var InitDriverRX = make(chan struct{}, 1)
 //Order manager
 
 //OrderFHM delivers orders from Hardware Manager to Order Manager
-var OrderFHM chan datatypes.SWOrder = make(chan datatypes.SWOrder, 10)
+var OrderFHM chan datatypes.Order = make(chan datatypes.Order, 10)

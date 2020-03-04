@@ -51,7 +51,7 @@ type CostAnswer struct {
 	CostValue     int
 }
 
-type SWOrder struct {
+type Order struct {
 	Signature string
 	SourceID  string
 	PrimaryID string

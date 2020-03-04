@@ -136,7 +136,7 @@ func ConfigureAndRunTest() {
 		var ans string
 		fmt.Scan(&ans)
 		if ans == "y" || ans == "" {
-			var dummyOrder datatypes.SWOrder
+			var dummyOrder datatypes.Order
 			fmt.Println("Floor: ")
 			fmt.Scan(&dummyOrder.Floor)
 			fmt.Println("Dir (1/-1):")
@@ -173,7 +173,7 @@ func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
 	channels.OrderRecvAckFOM <- orderRecvAck
 }
 
-func generateQueueOrder(order datatypes.SWOrder) datatypes.QueueOrder {
+func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {
 	var queueOrder datatypes.QueueOrder
 	queueOrder.SourceID = order.SourceID
 	queueOrder.Dir = order.Dir

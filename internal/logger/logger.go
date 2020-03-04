@@ -79,7 +79,7 @@ func WriteLog(data interface{}, primary bool, directory string) {
 	}
 }
 
-func ReadLogQueue(data *[]datatypes.SWOrder, primary bool, directory string) {
+func ReadLogQueue(data *[]datatypes.Order, primary bool, directory string) {
 	assetsDir := AssetsDir()
 	_, readFile := selectFileNames(*data, primary, assetsDir, directory)
 	file, _ := ioutil.ReadFile(filepath.Join(assetsDir, directory) + readFile)

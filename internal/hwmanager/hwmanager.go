@@ -38,7 +38,7 @@ func PollCurrentFloor(curFloorChan chan<- datatypes.Floor) {
 
 }
 
-func PollHWORder(hwOrderChan chan<- datatypes.HW_Order) {
+func PollHWORder(hwOrderChan chan<- datatypes.Order) {
 
 	btnChan := make(chan elevio.ButtonEvent)
 	go elevio.PollButtons(btnChan)
@@ -47,7 +47,7 @@ func PollHWORder(hwOrderChan chan<- datatypes.HW_Order) {
 
 		btnValue := <-btnChan
 
-		hwOrder := datatypes.HW_Order{
+		hwOrder := datatypes.Order{
 			Floor: datatypes.Floor(btnValue.Floor),
 			Dir:   datatypes.Direction(btnValue.Button),
 		}
@@ -56,7 +56,7 @@ func PollHWORder(hwOrderChan chan<- datatypes.HW_Order) {
 	}
 }
 
-func SetLight(element datatypes.HW_Order, value bool) {
+func SetLight(element datatypes.Order, value bool) {
 	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
 		value)
 }
@@ -115,7 +115,7 @@ func omMock() {
 func omMockGetHWOrders() {
 
 	// Poll HW orders
-	hwOrderChan := make(chan datatypes.HW_Order)
+	hwOrderChan := make(chan datatypes.Order)
 
 	go PollHWORder(hwOrderChan)
 
@@ -129,7 +129,7 @@ func omMockGetHWOrders() {
 	}
 }
 
-func omMockLightControl(order datatypes.HW_Order) {
+func omMockLightControl(order datatypes.Order) {
 
 	// Set that light on
 	SetLight(order, true)

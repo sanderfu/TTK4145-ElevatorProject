@@ -23,10 +23,7 @@ func main() {
 
 	go networkmanager.NetworkManager()
 
-	go networkmanager.TestSendingRedundant(10)
-	go networkmanager.TestReceivingRedundant(25)
-
-	hwmanager.Init(4)
+	go hwmanager.Init(4)
 
 	go ordermanager.OrderManager()
 	go ordermanager.ConfigureAndRunTest()
