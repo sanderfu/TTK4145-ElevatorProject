@@ -198,8 +198,6 @@ func receiver(port int) {
 			}
 		case orderComplete := <-OrderCompleteRX:
 			if !checkDuplicate(orderComplete.Signature) {
-				fmt.Println("Recieved orderComplete over network")
-				fmt.Printf("%#v\n", orderComplete)
 				OrderCompleteTOM <- orderComplete
 			}
 		case <-killReceiver:

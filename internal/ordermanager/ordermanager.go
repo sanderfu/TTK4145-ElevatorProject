@@ -14,7 +14,7 @@ import (
 const (
 	answerWaitMS       = 250
 	orderRecvAckWaitMS = 250
-	maxCost            = 10
+	maxCost            = 1000
 	backupWaitS        = 10
 )
 
@@ -40,22 +40,24 @@ func OrderManager() {
 
 	fmt.Println("Hello go, this is Order Manager speaking!")
 
-	go receiver()
+	go costReqWatch()
 	go orderRegHW()
 	go orderRegSW()
 	go queueModifier()
 	go orderCompleteWatch()
-	go backupWatch()
+	//go backupWatch()
 
 }
 
-func receiver() {
+func costReqWatch() {
+	var costReq datatypes.CostRequest
+	var costAns datatypes.CostAnswer
 	for {
-		select {
-		case costReq := <-channels.CostRequestTOM:
-			dummyCostAns(costReq)
-		default:
-		}
+		costReq = <-channels.CostRequestTOM
+		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
+		costAns.DestinationID = costReq.SourceID
+		channels.CostAnswerFOM <- costAns
+
 	}
 }
 
@@ -116,6 +118,7 @@ func orderRegHW() {
 				}
 				if ackCounter == 2 {
 					//Transmit was successful
+					channels.OrderRegisteredTHM <- order
 					break ackWaitloop
 				}
 			}
@@ -283,17 +286,10 @@ func backupWatch() {
 	for {
 		for _, elem := range backupQueue {
 			if time.Since(elem.RegistrationTime) > backupWaitS*time.Second {
-				fmt.Printf("Backup element timed out\n#%v\n", elem)
 				backupRemove <- elem
 				primaryAppend <- elem
 			}
 		}
 		time.Sleep(1 * time.Second)
 	}
-}
-
-func generateCost(order datatypes.Order) int {
-	cost := 2*len(primaryQueue) + 1*len(backupQueue)
-
-	return cost
 }

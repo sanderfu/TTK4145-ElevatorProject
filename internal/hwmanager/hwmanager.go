@@ -6,10 +6,23 @@ import (
 
 	"github.com/TTK4145/Network-go/network/localip"
 	"github.com/TTK4145/driver-go/elevio"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+const (
+	numFloors = 4
+)
+
 var totalFloors int
+
+func HardwareManager() {
+	Init(numFloors)
+
+	go pollHWORder(channels.OrderFHM)
+	go lightWatch()
+
+}
 
 func Init(numFloors int) {
 	// TODO: Find out if this function should take addr and numFloors as args
@@ -25,8 +38,8 @@ func Init(numFloors int) {
 	elevio.Init(addr, numFloors)
 	SetAllLights(false)
 
-	go fsmMock()
-	go omMock()
+	//go fsmMock()
+	//go omMock()
 
 }
 
@@ -45,7 +58,7 @@ func PollCurrentFloor(curFloorChan chan<- datatypes.Floor) {
 
 }
 
-func PollHWORder(hwOrderChan chan<- datatypes.Order) {
+func pollHWORder(hwOrderChan chan<- datatypes.Order) {
 
 	btnChan := make(chan elevio.ButtonEvent)
 	go elevio.PollButtons(btnChan)
@@ -53,12 +66,12 @@ func PollHWORder(hwOrderChan chan<- datatypes.Order) {
 	for {
 
 		btnValue := <-btnChan
-
+		fmt.Println("Button pressed")
 		hwOrder := datatypes.Order{
 			Floor: datatypes.Floor(btnValue.Floor),
 			Dir:   datatypes.Direction(btnValue.Button),
 		}
-
+		fmt.Println("Sending order to channel")
 		hwOrderChan <- hwOrder
 	}
 }
@@ -81,6 +94,20 @@ func SetAllLights(value bool) {
 
 func SetElevatorDirection(dir datatypes.Direction) {
 	elevio.SetMotorDirection(elevio.MotorDirection(dir))
+}
+
+func lightWatch() {
+	for {
+		select {
+		case orderComplete := <-channels.OrderCompleteTHM:
+			var order datatypes.Order
+			order.Floor = orderComplete.Floor
+			order.Dir = orderComplete.Dir
+			SetLight(order, false)
+		case orderRegistered := <-channels.OrderRegisteredTHM:
+			SetLight(orderRegistered, true)
+		}
+	}
 }
 
 // Mocks below
@@ -124,7 +151,7 @@ func omMockGetHWOrders() {
 	// Poll HW orders
 	hwOrderChan := make(chan datatypes.Order)
 
-	go PollHWORder(hwOrderChan)
+	go pollHWORder(channels.OrderFHM)
 
 	for {
 		hwOrder := <-hwOrderChan
