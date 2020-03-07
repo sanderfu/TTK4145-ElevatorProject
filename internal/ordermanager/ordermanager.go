@@ -45,7 +45,7 @@ func OrderManager() {
 	go orderRegSW()
 	go queueModifier()
 	go orderCompleteWatch()
-	//go backupWatch()
+	go backupWatch()
 
 }
 
