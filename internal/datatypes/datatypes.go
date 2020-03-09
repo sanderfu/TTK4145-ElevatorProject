@@ -1,11 +1,14 @@
 package datatypes
 
+import "time"
+
 // Datatypes goes here
 //TODO: Fix everything to be CamelCase
 
 //Basic types
 type Floor int
 type Direction int
+type StructType int
 
 const (
 	FIRST  Floor = 0
@@ -28,40 +31,65 @@ const (
 	MotorStop Direction = 0
 )
 
-//Struct types
+const ()
 
-type Cost_request struct {
-	Source_id string
+//Struct types
+// Note that all members we want to transmit must be public. Any private members
+//  will be received as zero-values over the network.
+
+type CostRequest struct {
+	Signature string //Used by networkmanager to remove duplicates
+	SourceID  string //ID of sender, to direct answer back.
 	Floor     Floor
 	Direction Direction
 }
 
-type Cost_answer struct {
-	Source_id  string
-	Cost_value float64
+type CostAnswer struct {
+	Signature     string //Used by networkmanager to remove duplicates
+	SourceID      string //ID of answer sender.
+	DestinationID string //ID of answer receiver
+	CostValue     int
 }
 
-type SW_Order struct {
-	Primary_id string
-	Backup_id  string
-	Floor      Floor
-	Dir        Direction
-}
-
-type Order_recv_ack struct {
-	Source_id string
+type Order struct {
+	Signature string
+	SourceID  string
+	PrimaryID string
+	BackupID  string
 	Floor     Floor
 	Dir       Direction
 }
 
-// This type can be the same for Order_complete and HW_Order since they will be
-// the same (Martin thinks). So TODO: merge these into one
-type Order_complete struct {
-	Floor Floor
-	Dir   Direction
+type OrderRecvAck struct {
+	Signature     string
+	SourceID      string
+	DestinationID string
+	Floor         Floor
+	Dir           Direction
 }
 
-type HW_Order struct {
-	Floor Floor
-	Dir   Direction
+type OrderComplete struct {
+	Signature string
+	Floor     Floor
+	Dir       Direction
+}
+
+type LightCommand struct {
+	Signature string
+	Floor     Floor
+	Dir       Direction
+}
+
+type NWMMode int
+
+const (
+	Network   NWMMode = 0
+	Localhost NWMMode = 1
+)
+
+type QueueOrder struct {
+	SourceID         string
+	Floor            Floor
+	Dir              Direction
+	RegistrationTime time.Time
 }
