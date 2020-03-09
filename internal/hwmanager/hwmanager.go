@@ -6,31 +6,41 @@ import (
 
 	"github.com/TTK4145/Network-go/network/localip"
 	"github.com/TTK4145/driver-go/elevio"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
 var totalFloors int
 
-func Init(numFloors int) {
+func HardwareManager() {
+
+	setup(4)
+
+	go pollCurrentFloor()
+	go pollHWORder()
+
+}
+
+func setup(numFloors int) {
 	// TODO: Find out if this function should take addr and numFloors as args
 	addr, err := localip.LocalIP()
 
 	if err != nil {
-		fmt.Println("Error: hwmanager (Init):", err)
+		fmt.Println("Error: hwmanager (setup):", err)
 	}
 
 	addr += ":15657"
 	totalFloors = numFloors
 
 	elevio.Init(addr, numFloors)
-	SetAllLights(false)
+	setAllLights(false)
 
 	//go fsmMock()
-	go omMock()
+	//go omMock()
 
 }
 
-func PollCurrentFloor(curFloorChan chan<- datatypes.Floor) {
+func pollCurrentFloor() {
 
 	floorSensorChan := make(chan int)
 	go elevio.PollFloorSensor(floorSensorChan)
@@ -40,12 +50,12 @@ func PollCurrentFloor(curFloorChan chan<- datatypes.Floor) {
 
 		elevio.SetFloorIndicator(floor)
 
-		curFloorChan <- datatypes.Floor(floor)
+		channels.CurrentFloorTFSM <- datatypes.Floor(floor)
 	}
 
 }
 
-func PollHWORder(hwOrderChan chan<- datatypes.Order) {
+func pollHWORder() {
 
 	btnChan := make(chan elevio.ButtonEvent)
 	go elevio.PollButtons(btnChan)
@@ -59,16 +69,16 @@ func PollHWORder(hwOrderChan chan<- datatypes.Order) {
 			Dir:   datatypes.Direction(btnValue.Button),
 		}
 
-		hwOrderChan <- hwOrder
+		channels.OrderFHM <- hwOrder
 	}
 }
 
-func SetLight(element datatypes.Order, value bool) {
+func setLight(element datatypes.Order, value bool) {
 	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
 		value)
 }
 
-func SetAllLights(value bool) {
+func setAllLights(value bool) {
 	for floor := 0; floor < totalFloors; floor++ {
 		for btn := elevio.BT_HallUp; btn <= elevio.BT_Cab; btn++ {
 			if !(floor == 0 && btn == elevio.BT_HallDown) &&
@@ -79,7 +89,7 @@ func SetAllLights(value bool) {
 	}
 }
 
-func SetElevatorDirection(dir datatypes.Direction) {
+func setElevatorDirection(dir datatypes.Direction) {
 	elevio.SetMotorDirection(elevio.MotorDirection(dir))
 }
 
@@ -91,32 +101,27 @@ func SetDoorOpenLamp(value bool) {
 
 func fsmMock() {
 	go fsmPollFloorMock()
-	go fsmSetElevatorDirectionMock()
+	go fsmsetElevatorDirectionMock()
 }
 
 func fsmPollFloorMock() {
 
-	// Poll current floor
-	floorChan := make(chan datatypes.Floor)
-
-	go PollCurrentFloor(floorChan)
-
 	for {
-		floor := <-floorChan
+		floor := <-channels.CurrentFloorTFSM
 		fmt.Println("Reached floor", floor)
 	}
 }
 
-func fsmSetElevatorDirectionMock() {
+func fsmsetElevatorDirectionMock() {
 
 	// Simulate an arbitrary sequence to see that directions are set correctly
-	SetElevatorDirection(datatypes.MotorUp)
+	setElevatorDirection(datatypes.MotorUp)
 	time.Sleep(time.Second * 3)
-	SetElevatorDirection(datatypes.MotorStop)
+	setElevatorDirection(datatypes.MotorStop)
 	time.Sleep(time.Second * 3)
-	SetElevatorDirection(datatypes.MotorDown)
+	setElevatorDirection(datatypes.MotorDown)
 	time.Sleep(time.Second * 3)
-	SetElevatorDirection(datatypes.MotorStop)
+	setElevatorDirection(datatypes.MotorStop)
 }
 
 func omMock() {
@@ -124,14 +129,8 @@ func omMock() {
 }
 
 func omMockGetHWOrders() {
-
-	// Poll HW orders
-	hwOrderChan := make(chan datatypes.Order)
-
-	go PollHWORder(hwOrderChan)
-
 	for {
-		hwOrder := <-hwOrderChan
+		hwOrder := <-channels.OrderFHM
 
 		fmt.Println("HW Order: Floor", hwOrder.Floor, "Direction:", hwOrder.Dir)
 
@@ -143,10 +142,10 @@ func omMockGetHWOrders() {
 func omMockLightControl(order datatypes.Order) {
 
 	// Set that light on
-	SetLight(order, true)
+	setLight(order, true)
 
 	time.Sleep(time.Second * 3)
 
-	SetLight(order, false)
+	setLight(order, false)
 
 }
