@@ -10,6 +10,10 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+const (
+	numFloors = 4
+)
+
 var totalFloors int
 
 func HardwareManager() {
@@ -18,6 +22,7 @@ func HardwareManager() {
 
 	go pollCurrentFloor()
 	go pollHWORder()
+	go lightWatch()
 
 }
 
@@ -64,7 +69,7 @@ func pollHWORder() {
 	for {
 
 		btnValue := <-btnChan
-
+		fmt.Println("Button pressed")
 		hwOrder := datatypes.Order{
 			Floor: datatypes.Floor(btnValue.Floor),
 			Dir:   datatypes.Direction(btnValue.Button),
@@ -74,7 +79,7 @@ func pollHWORder() {
 	}
 }
 
-func SetLight(element datatypes.Order, value bool) {
+func setLight(element datatypes.Order, value bool) {
 	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
 		value)
 }
@@ -96,6 +101,20 @@ func SetElevatorDirection(dir datatypes.Direction) {
 
 func SetDoorOpenLamp(value bool) {
 	elevio.SetDoorOpenLamp(value)
+}
+
+func lightWatch() {
+	for {
+		select {
+		case orderComplete := <-channels.OrderCompleteTHM:
+			var order datatypes.Order
+			order.Floor = orderComplete.Floor
+			order.Dir = orderComplete.Dir
+			setLight(order, false)
+		case orderRegistered := <-channels.OrderRegisteredTHM:
+			setLight(orderRegistered, true)
+		}
+	}
 }
 
 // Mocks below
@@ -143,10 +162,10 @@ func omMockGetHWOrders() {
 func omMockLightControl(order datatypes.Order) {
 
 	// Set that light on
-	SetLight(order, true)
+	setLight(order, true)
 
 	time.Sleep(time.Second * 3)
 
-	SetLight(order, false)
+	setLight(order, false)
 
 }

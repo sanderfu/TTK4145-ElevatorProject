@@ -70,7 +70,7 @@ var KillDriverRX = make(chan struct{}, 1)
 var InitDriverTX = make(chan struct{}, 1)
 var InitDriverRX = make(chan struct{}, 1)
 
-//Order manager
+//Hardware manager
 
 //OrderFHM delivers orders from Hardware Manager to Order Manager
 var OrderFHM chan datatypes.Order = make(chan datatypes.Order, 10)
@@ -79,3 +79,9 @@ var CurrentFloorTFSM chan datatypes.Floor = make(chan datatypes.Floor)
 
 // Channel to send init status to FSM from HM
 var HMInitStatusTFSM chan bool = make(chan bool)
+
+//OrderCompleteTHM delivers order complete messages from Order Manager to Hardware manager to clear lights
+var OrderCompleteTHM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)
+
+//OrderRegisteredTHM delivers orders from Order Manager to Hardware Manager that has been registered by Primary & Backup in non-volatile memory
+var OrderRegisteredTHM chan datatypes.Order = make(chan datatypes.Order, 10)
