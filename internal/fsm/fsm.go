@@ -71,7 +71,7 @@ func fsmInit(numFloors int) {
 
 func idle() {
 
-	fmt.Println("State idle")
+	// fmt.Println("State idle")
 
 	// Check for new orders
 	if ordermanager.QueueEmpty() {
@@ -97,7 +97,7 @@ func idle() {
 
 func moving() {
 
-	fmt.Println("State moving")
+	// fmt.Println("State moving")
 
 	// Check if we arrived at destination floor
 	if currentOrder.Floor == lastFloor {
@@ -108,14 +108,15 @@ func moving() {
 
 		// Tell order manager that order was completed on given floor
 		completedOrder := datatypes.OrderComplete{
-			Floor: lastFloor,
+			Floor: currentOrder.Floor,
+			Dir:   currentOrder.Dir,
 		}
 		channels.OrderCompleteTOM <- completedOrder
 
 		currentState = datatypes.DoorOpenState
 	} else if newFloorFlag == true {
 		// Check if we arrived at a new floor and there is an order there
-		if ordermanager.OrderToTakeAtFloor(lastFloor, currentDir) {
+		if ordermanager.OrderToTakeAtFloor(lastFloor, motorDirToOrderDir(currentDir)) {
 			fmt.Println("Stopping at floor even though its not destination")
 			hwmanager.SetElevatorDirection(datatypes.MotorStop)
 			doorOpeningTime = time.Now()
@@ -130,6 +131,16 @@ func moving() {
 			currentState = datatypes.DoorOpenState
 		}
 		newFloorFlag = false
+	}
+}
+
+func motorDirToOrderDir(dir datatypes.Direction) datatypes.Direction {
+	if dir == datatypes.MotorUp {
+		return datatypes.UP
+	} else if dir == datatypes.MotorDown {
+		return datatypes.DOWN
+	} else {
+		return datatypes.INSIDE
 	}
 }
 

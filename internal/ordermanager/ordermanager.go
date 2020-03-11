@@ -277,6 +277,7 @@ func orderCompleteWatch() {
 		queueOrder.Floor = orderComplete.Floor
 		primaryRemove <- queueOrder
 		backupRemove <- queueOrder
+		channels.OrderCompleteTHM <- orderComplete
 		fmt.Println("The remove request has been handeled")
 
 	}

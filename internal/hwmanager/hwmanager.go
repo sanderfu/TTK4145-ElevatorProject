@@ -38,7 +38,10 @@ func setup(numFloors int) {
 	totalFloors = numFloors
 
 	elevio.Init(addr, numFloors)
-	SetAllLights(false)
+	for floor := datatypes.FIRST; floor < datatypes.Floor(totalFloors); floor++ {
+		setAllLightsAtFloor(floor, false)
+	}
+	SetDoorOpenLamp(false)
 
 	channels.HMInitStatusTFSM <- true
 	//go fsmMock()
@@ -84,15 +87,14 @@ func setLight(element datatypes.Order, value bool) {
 		value)
 }
 
-func SetAllLights(value bool) {
-	for floor := 0; floor < totalFloors; floor++ {
-		for btn := elevio.BT_HallUp; btn <= elevio.BT_Cab; btn++ {
-			if !(floor == 0 && btn == elevio.BT_HallDown) &&
-				!(floor == totalFloors-1 && btn == elevio.BT_HallUp) {
-				elevio.SetButtonLamp(btn, floor, value)
-			}
+func setAllLightsAtFloor(floor datatypes.Floor, value bool) {
+	for btn := datatypes.UP; btn <= datatypes.INSIDE; btn++ {
+		if !(int(floor) == 0 && btn == datatypes.DOWN) &&
+			!(int(floor) == totalFloors-1 && btn == datatypes.UP) {
+			elevio.SetButtonLamp(elevio.ButtonType(btn), int(floor), value)
 		}
 	}
+
 }
 
 func SetElevatorDirection(dir datatypes.Direction) {
@@ -107,10 +109,7 @@ func lightWatch() {
 	for {
 		select {
 		case orderComplete := <-channels.OrderCompleteTHM:
-			var order datatypes.Order
-			order.Floor = orderComplete.Floor
-			order.Dir = orderComplete.Dir
-			setLight(order, false)
+			setAllLightsAtFloor(orderComplete.Floor, false)
 		case orderRegistered := <-channels.OrderRegisteredTHM:
 			setLight(orderRegistered, true)
 		}
