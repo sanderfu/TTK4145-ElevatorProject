@@ -2,6 +2,7 @@ package fsm
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
@@ -23,32 +24,40 @@ var doorOpeningTime time.Time
 
 const doorTimeout = 3
 
-func Run() {
+func FSM() {
+
+	// Add init here
+	fsmInit(4)
+
 	for {
 		switch currentState {
 		case datatypes.IdleState:
-			Idle()
+			idle()
 		case datatypes.MovingState:
-			Moving()
+			moving()
 		case datatypes.DoorOpenState:
-			DoorOpen()
+			doorOpen()
 		default:
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-func Init(numFloors int) {
-
+func fsmInit(numFloors int) {
 	fmt.Println("Starting FSM")
 
 	totalFloors = numFloors
 
-	hwmanager.Init(numFloors)
+	// Wait for hardware manager to finish its setup
+	hmInitStatus := <-channels.HMInitStatusTFSM
+
+	if !hmInitStatus {
+		println("Hardware Manager failed to initialize")
+		os.Exit(1)
+	}
 
 	// Go down until elevator arrives at known floor
 	hwmanager.SetElevatorDirection(datatypes.MotorDown)
-	go hwmanager.PollCurrentFloor(channels.CurrentFloorTFSM)
 	lastFloor = <-channels.CurrentFloorTFSM
 	hwmanager.SetElevatorDirection(datatypes.MotorStop)
 	currentDir = datatypes.MotorStop
@@ -57,22 +66,19 @@ func Init(numFloors int) {
 
 	go updateLastFloor()
 
-	Run()
+	currentState = datatypes.IdleState
 }
 
-func Idle() {
+func idle() {
 
-	//fmt.Println("State idle")
+	fmt.Println("State idle")
 
 	// Check for new orders
-	var firstOrder datatypes.QueueOrder
-	ordermanager.PeekFirstOrderInQueue(&firstOrder)
-
-	if &firstOrder == nil {
+	if ordermanager.QueueEmpty() {
 		return
 	}
 
-	currentOrder = firstOrder
+	currentOrder = ordermanager.GetFirstOrderInQueue()
 
 	// Calculate direction to move in
 	if currentOrder.Floor > lastFloor {
@@ -89,26 +95,46 @@ func Idle() {
 	currentState = datatypes.MovingState
 }
 
-func Moving() {
+func moving() {
 
-	//fmt.Println("State moving")
+	fmt.Println("State moving")
 
 	// Check if we arrived at destination floor
 	if currentOrder.Floor == lastFloor {
-		fmt.Println("Arrived at floor", lastFloor)
+		fmt.Println("Arrived at destination floor", lastFloor)
 		hwmanager.SetElevatorDirection(datatypes.MotorStop)
 		doorOpeningTime = time.Now()
 		hwmanager.SetDoorOpenLamp(true)
+
+		// Tell order manager that order was completed on given floor
+		completedOrder := datatypes.OrderComplete{
+			Floor: lastFloor,
+		}
+		channels.OrderCompleteTOM <- completedOrder
+
 		currentState = datatypes.DoorOpenState
+	} else if newFloorFlag == true {
+		// Check if we arrived at a new floor and there is an order there
+		if ordermanager.OrderToTakeAtFloor(lastFloor, currentDir) {
+			fmt.Println("Stopping at floor even though its not destination")
+			hwmanager.SetElevatorDirection(datatypes.MotorStop)
+			doorOpeningTime = time.Now()
+			hwmanager.SetDoorOpenLamp(true)
 
-		// TODO: Tell order manager that the order is complete
+			// Tell order manager that order was completed on given floor
+			completedOrder := datatypes.OrderComplete{
+				Floor: lastFloor,
+			}
+			channels.OrderCompleteTOM <- completedOrder
+
+			currentState = datatypes.DoorOpenState
+		}
+		newFloorFlag = false
 	}
-
-	// TODO: Check if elevator should stop at floor if newFloorFlag == true
 }
 
-func DoorOpen() {
-	fmt.Println("The door should now open")
+func doorOpen() {
+	fmt.Println("State door open")
 
 	if time.Since(doorOpeningTime) > doorTimeout*time.Second {
 		fmt.Println("Door closing")
@@ -120,14 +146,10 @@ func DoorOpen() {
 
 func updateLastFloor() {
 	for {
-		lastFloor = <-channels.CurrentFloorTFSM
-		newFloorFlag = true
+		floor := <-channels.CurrentFloorTFSM
+		if floor != lastFloor {
+			lastFloor = floor
+			newFloorFlag = true
+		}
 	}
 }
-
-// States
-// Idle
-// Moving
-// Door open
-//
-//

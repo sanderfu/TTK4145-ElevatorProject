@@ -261,19 +261,26 @@ func orderCompleteWatch() {
 	}
 }
 
-func PeekFirstOrderInQueue(order *datatypes.QueueOrder) {
+func GetFirstOrderInQueue() datatypes.QueueOrder {
+	return primaryQueue[0]
+}
 
-	if len(primaryQueue) > 0 {
-		*order = primaryQueue[0]
-		return
+func QueueEmpty() bool {
+	if len(primaryQueue) == 0 {
+		return true
+	} else {
+		return false
 	}
-	order = nil
+}
 
-	//var dummyOrder datatypes.QueueOrder
-	//dummyOrder.Dir = datatypes.DOWN
-	//dummyOrder.Floor = datatypes.FOURTH
+func OrderToTakeAtFloor(floor datatypes.Floor, dir datatypes.Direction) bool {
 
-	//*order = dummyOrder
+	for _, order := range primaryQueue {
+		if order.Floor == floor && (order.Dir == dir || order.Dir == datatypes.INSIDE) {
+			return true
+		}
+	}
+	return false
 }
 
 // TODO: Make function for checking if elevator should stop at floor

@@ -76,3 +76,6 @@ var InitDriverRX = make(chan struct{}, 1)
 var OrderFHM chan datatypes.Order = make(chan datatypes.Order, 10)
 
 var CurrentFloorTFSM chan datatypes.Floor = make(chan datatypes.Floor)
+
+// Channel to send init status to FSM from HM
+var HMInitStatusTFSM chan bool = make(chan bool)
