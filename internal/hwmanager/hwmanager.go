@@ -10,6 +10,10 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+const (
+	numFloors = 4
+)
+
 var totalFloors int
 
 func HardwareManager() {
@@ -63,7 +67,7 @@ func pollHWORder() {
 	for {
 
 		btnValue := <-btnChan
-
+		fmt.Println("Button pressed")
 		hwOrder := datatypes.Order{
 			Floor: datatypes.Floor(btnValue.Floor),
 			Dir:   datatypes.Direction(btnValue.Button),
@@ -91,6 +95,20 @@ func setAllLights(value bool) {
 
 func setElevatorDirection(dir datatypes.Direction) {
 	elevio.SetMotorDirection(elevio.MotorDirection(dir))
+}
+
+func lightWatch() {
+	for {
+		select {
+		case orderComplete := <-channels.OrderCompleteTHM:
+			var order datatypes.Order
+			order.Floor = orderComplete.Floor
+			order.Dir = orderComplete.Dir
+			setLight(order, false)
+		case orderRegistered := <-channels.OrderRegisteredTHM:
+			setLight(orderRegistered, true)
+		}
+	}
 }
 
 // Mocks below
