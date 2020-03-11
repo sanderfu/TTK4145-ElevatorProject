@@ -75,5 +75,7 @@ var InitDriverRX = make(chan struct{}, 1)
 //OrderFHM delivers orders from Hardware Manager to Order Manager
 var OrderFHM chan datatypes.Order = make(chan datatypes.Order, 10)
 
-// FloorFHM delivers current floor to FSM from Hardware Manager
-var FloorFHM chan datatypes.Floor = make(chan datatypes.Floor)
+var CurrentFloorTFSM chan datatypes.Floor = make(chan datatypes.Floor)
+
+// Channel to send init status to FSM from HM
+var HMInitStatusTFSM chan bool = make(chan bool)

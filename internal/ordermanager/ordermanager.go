@@ -260,3 +260,27 @@ func orderCompleteWatch() {
 		}
 	}
 }
+
+func GetFirstOrderInQueue() datatypes.QueueOrder {
+	return primaryQueue[0]
+}
+
+func QueueEmpty() bool {
+	if len(primaryQueue) == 0 {
+		return true
+	} else {
+		return false
+	}
+}
+
+func OrderToTakeAtFloor(floor datatypes.Floor, dir datatypes.Direction) bool {
+
+	for _, order := range primaryQueue {
+		if order.Floor == floor && (order.Dir == dir || order.Dir == datatypes.INSIDE) {
+			return true
+		}
+	}
+	return false
+}
+
+// TODO: Make function for checking if elevator should stop at floor

@@ -33,8 +33,9 @@ func setup(numFloors int) {
 	totalFloors = numFloors
 
 	elevio.Init(addr, numFloors)
-	setAllLights(false)
+	SetAllLights(false)
 
+	channels.HMInitStatusTFSM <- true
 	//go fsmMock()
 	//go omMock()
 
@@ -50,7 +51,7 @@ func pollCurrentFloor() {
 
 		elevio.SetFloorIndicator(floor)
 
-		channels.FloorFHM <- datatypes.Floor(floor)
+		channels.CurrentFloorTFSM <- datatypes.Floor(floor)
 	}
 
 }
@@ -73,12 +74,12 @@ func pollHWORder() {
 	}
 }
 
-func setLight(element datatypes.Order, value bool) {
+func SetLight(element datatypes.Order, value bool) {
 	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
 		value)
 }
 
-func setAllLights(value bool) {
+func SetAllLights(value bool) {
 	for floor := 0; floor < totalFloors; floor++ {
 		for btn := elevio.BT_HallUp; btn <= elevio.BT_Cab; btn++ {
 			if !(floor == 0 && btn == elevio.BT_HallDown) &&
@@ -89,8 +90,12 @@ func setAllLights(value bool) {
 	}
 }
 
-func setElevatorDirection(dir datatypes.Direction) {
+func SetElevatorDirection(dir datatypes.Direction) {
 	elevio.SetMotorDirection(elevio.MotorDirection(dir))
+}
+
+func SetDoorOpenLamp(value bool) {
+	elevio.SetDoorOpenLamp(value)
 }
 
 // Mocks below
@@ -103,7 +108,7 @@ func fsmMock() {
 func fsmPollFloorMock() {
 
 	for {
-		floor := <-channels.FloorFHM
+		floor := <-channels.CurrentFloorTFSM
 		fmt.Println("Reached floor", floor)
 	}
 }
@@ -111,13 +116,13 @@ func fsmPollFloorMock() {
 func fsmsetElevatorDirectionMock() {
 
 	// Simulate an arbitrary sequence to see that directions are set correctly
-	setElevatorDirection(datatypes.MotorUp)
+	SetElevatorDirection(datatypes.MotorUp)
 	time.Sleep(time.Second * 3)
-	setElevatorDirection(datatypes.MotorStop)
+	SetElevatorDirection(datatypes.MotorStop)
 	time.Sleep(time.Second * 3)
-	setElevatorDirection(datatypes.MotorDown)
+	SetElevatorDirection(datatypes.MotorDown)
 	time.Sleep(time.Second * 3)
-	setElevatorDirection(datatypes.MotorStop)
+	SetElevatorDirection(datatypes.MotorStop)
 }
 
 func omMock() {
@@ -138,10 +143,10 @@ func omMockGetHWOrders() {
 func omMockLightControl(order datatypes.Order) {
 
 	// Set that light on
-	setLight(order, true)
+	SetLight(order, true)
 
 	time.Sleep(time.Second * 3)
 
-	setLight(order, false)
+	SetLight(order, false)
 
 }
