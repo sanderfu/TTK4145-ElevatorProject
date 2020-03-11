@@ -38,7 +38,7 @@ func setup(numFloors int) {
 	totalFloors = numFloors
 
 	elevio.Init(addr, numFloors)
-	for floor := datatypes.FIRST; floor < datatypes.Floor(totalFloors); floor++ {
+	for floor := 0; floor < totalFloors; floor++ {
 		setAllLightsAtFloor(floor, false)
 	}
 	SetDoorOpenLamp(false)
@@ -59,7 +59,7 @@ func pollCurrentFloor() {
 
 		elevio.SetFloorIndicator(floor)
 
-		channels.CurrentFloorTFSM <- datatypes.Floor(floor)
+		channels.CurrentFloorTFSM <- floor
 	}
 
 }
@@ -74,8 +74,8 @@ func pollHWORder() {
 		btnValue := <-btnChan
 		fmt.Println("Button pressed")
 		hwOrder := datatypes.Order{
-			Floor: datatypes.Floor(btnValue.Floor),
-			Dir:   datatypes.Direction(btnValue.Button),
+			Floor: btnValue.Floor,
+			Dir:   int(btnValue.Button),
 		}
 
 		channels.OrderFHM <- hwOrder
@@ -87,7 +87,7 @@ func setLight(element datatypes.Order, value bool) {
 		value)
 }
 
-func setAllLightsAtFloor(floor datatypes.Floor, value bool) {
+func setAllLightsAtFloor(floor int, value bool) {
 	for btn := datatypes.UP; btn <= datatypes.INSIDE; btn++ {
 		if !(int(floor) == 0 && btn == datatypes.DOWN) &&
 			!(int(floor) == totalFloors-1 && btn == datatypes.UP) {
@@ -97,7 +97,7 @@ func setAllLightsAtFloor(floor datatypes.Floor, value bool) {
 
 }
 
-func SetElevatorDirection(dir datatypes.Direction) {
+func SetElevatorDirection(dir int) {
 	elevio.SetMotorDirection(elevio.MotorDirection(dir))
 }
 

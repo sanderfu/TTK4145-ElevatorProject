@@ -13,9 +13,9 @@ import (
 
 var totalFloors int
 
-var lastFloor datatypes.Floor
+var lastFloor int
 var newFloorFlag bool
-var currentDir datatypes.Direction
+var currentDir int
 
 var currentOrder datatypes.QueueOrder
 var currentState datatypes.State
@@ -134,7 +134,7 @@ func moving() {
 	}
 }
 
-func motorDirToOrderDir(dir datatypes.Direction) datatypes.Direction {
+func motorDirToOrderDir(dir int) int {
 	if dir == datatypes.MotorUp {
 		return datatypes.UP
 	} else if dir == datatypes.MotorDown {

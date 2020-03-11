@@ -6,30 +6,21 @@ import "time"
 //TODO: Fix everything to be CamelCase
 
 //Basic types
-type Floor int
-type Direction int
 type StructType int
 type State int
-
-const (
-	FIRST  Floor = 0
-	SECOND Floor = 1
-	THIRD  Floor = 2
-	FOURTH Floor = 3
-)
 
 // Change these to match with values from elevator_io (just for simplicity)
 // Martin thinks this works. TODO: Fix this comment
 const (
-	UP     Direction = 0
-	DOWN   Direction = 1
-	INSIDE Direction = 2
+	UP     int = 0
+	DOWN   int = 1
+	INSIDE int = 2
 )
 
 const (
-	MotorUp   Direction = 1
-	MotorDown Direction = -1
-	MotorStop Direction = 0
+	MotorUp   int = 1
+	MotorDown int = -1
+	MotorStop int = 0
 )
 
 const (
@@ -45,8 +36,8 @@ const (
 type CostRequest struct {
 	Signature string //Used by networkmanager to remove duplicates
 	SourceID  string //ID of sender, to direct answer back.
-	Floor     Floor
-	Direction Direction
+	Floor     int
+	Direction int
 }
 
 type CostAnswer struct {
@@ -61,28 +52,28 @@ type Order struct {
 	SourceID  string
 	PrimaryID string
 	BackupID  string
-	Floor     Floor
-	Dir       Direction
+	Floor     int
+	Dir       int
 }
 
 type OrderRecvAck struct {
 	Signature     string
 	SourceID      string
 	DestinationID string
-	Floor         Floor
-	Dir           Direction
+	Floor         int
+	Dir           int
 }
 
 type OrderComplete struct {
 	Signature string
-	Floor     Floor
-	Dir       Direction
+	Floor     int
+	Dir       int
 }
 
 type LightCommand struct {
 	Signature string
-	Floor     Floor
-	Dir       Direction
+	Floor     int
+	Dir       int
 }
 
 type NWMMode int
@@ -94,7 +85,7 @@ const (
 
 type QueueOrder struct {
 	SourceID         string
-	Floor            Floor
-	Dir              Direction
+	Floor            int
+	Dir              int
 	RegistrationTime time.Time
 }

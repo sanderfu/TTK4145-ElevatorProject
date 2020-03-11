@@ -307,7 +307,7 @@ func QueueEmpty() bool {
 	}
 }
 
-func OrderToTakeAtFloor(floor datatypes.Floor, dir datatypes.Direction) bool {
+func OrderToTakeAtFloor(floor int, dir int) bool {
 
 	for _, order := range primaryQueue {
 		if order.Floor == floor && (order.Dir == dir || order.Dir == datatypes.INSIDE) {
