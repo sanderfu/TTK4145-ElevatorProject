@@ -1,3 +1,4 @@
 {
-    "NumberOfFloors": 6
+    "NumberOfFloors": 4,
+    "ElevatorPort": 15657
 }

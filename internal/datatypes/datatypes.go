@@ -93,6 +93,7 @@ type QueueOrder struct {
 // Configuration struct
 type Configuration struct {
 	NumberOfFloors int
+	ElevatorPort   int
 }
 
 var Config Configuration
