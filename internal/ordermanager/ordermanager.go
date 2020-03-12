@@ -2,7 +2,6 @@ package ordermanager
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
@@ -11,16 +10,10 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 )
 
-const (
-	answerWaitMS       = 250
-	orderRecvAckWaitMS = 250
-	maxCost            = 1000
-	backupWaitS        = 10
-)
-
-//Test variables
-var failSendingAck = false
-var costValue = 5
+var answerWaitMS time.Duration
+var orderRecvAckWaitMS time.Duration
+var maxCost int
+var backupWaitS time.Duration
 
 var start time.Time
 
@@ -35,6 +28,12 @@ var backupRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
 
 //OrderManager ...
 func OrderManager() {
+
+	//Set global values based on configuration
+	answerWaitMS = time.Duration(datatypes.Config.CostRequestTimeoutMS)
+	orderRecvAckWaitMS = time.Duration(datatypes.Config.OrderReceiveAckTimeoutMS)
+	maxCost = datatypes.Config.MaxCostValue
+	backupWaitS = time.Duration(datatypes.Config.BackupTakeoverTimeoutS)
 
 	start = time.Now()
 
@@ -126,6 +125,7 @@ func orderRegHW() {
 	}
 }
 
+/*
 func ConfigureAndRunTest() {
 	fmt.Println("I am process: ", os.Getpid())
 
@@ -159,13 +159,15 @@ func ConfigureAndRunTest() {
 		}
 	}
 }
-
+*/
+/*
 func dummyCostAns(costreq datatypes.CostRequest) {
 	var costAns datatypes.CostAnswer
 	costAns.CostValue = costValue
 	costAns.DestinationID = costreq.SourceID
 	channels.CostAnswerFOM <- costAns
 }
+*/
 
 func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
 	var orderRecvAck datatypes.OrderRecvAck

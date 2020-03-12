@@ -98,6 +98,11 @@ type Configuration struct {
 	NetworkPacketDuplicates          int
 	MaxUniqueSignatures              int
 	UniqueSignatureRemovalPercentage int
+
+	CostRequestTimeoutMS     int
+	OrderReceiveAckTimeoutMS int
+	MaxCostValue             int
+	BackupTakeoverTimeoutS   int
 }
 
 var Config Configuration
