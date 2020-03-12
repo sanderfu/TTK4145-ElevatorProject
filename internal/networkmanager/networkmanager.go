@@ -12,11 +12,9 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
-const (
-	packetduplicates    = 10
-	maxuniquesignatures = 25
-	removeinclean       = int(maxuniquesignatures / 5)
-)
+var packetDuplicates int
+var maxUniqueSignatures int
+var removePercent int
 
 var recentSignatures []string
 
@@ -35,6 +33,11 @@ var initReceiver = make(chan struct{}, 1)
 
 //NetworkManager to start networkmanager routine.
 func NetworkManager() {
+	//Update global variables based on configuration
+	packetDuplicates = datatypes.Config.NetworkPacketDuplicates
+	maxUniqueSignatures = datatypes.Config.MaxUniqueSignatures
+	removePercent = datatypes.Config.UniqueSignatureRemovalPercentage
+
 	//Start timer used for signatures
 	start = time.Now()
 
@@ -99,18 +102,21 @@ func checkDuplicate(signature string) bool {
 		}
 	}
 	recentSignatures = append(recentSignatures, signature)
-	if len(recentSignatures) > maxuniquesignatures {
+	if len(recentSignatures) > maxUniqueSignatures {
 		cleanArray()
 	}
 	return false
 }
 
+// TODO: Check if we can remove this for loop and just slice the front, or just
+// slice it cleaner
 func cleanArray() {
+	numOfElementsToDelete := int(maxUniqueSignatures * removePercent / 100)
 
-	for i := 0; i < len(recentSignatures)-removeinclean; i++ {
-		recentSignatures[i] = recentSignatures[i+removeinclean]
+	for i := 0; i < len(recentSignatures)-numOfElementsToDelete; i++ {
+		recentSignatures[i] = recentSignatures[i+numOfElementsToDelete]
 	}
-	recentSignatures = recentSignatures[:len(recentSignatures)-removeinclean]
+	recentSignatures = recentSignatures[:len(recentSignatures)-numOfElementsToDelete]
 }
 
 func printRecentSignatures() {
@@ -129,30 +135,30 @@ func transmitter(port int) {
 		case order := <-SWOrderFOM:
 			order.Signature = createSignature(0)
 			order.SourceID = ip
-			for i := 0; i < packetduplicates; i++ {
+			for i := 0; i < packetDuplicates; i++ {
 				SWOrderTX <- order
 			}
 		case costReq := <-CostRequestFOM:
 			costReq.Signature = createSignature(1)
 			costReq.SourceID = ip
-			for i := 0; i < packetduplicates; i++ {
+			for i := 0; i < packetDuplicates; i++ {
 				CostRequestTX <- costReq
 			}
 		case costAns := <-CostAnswerFOM:
 			costAns.Signature = createSignature(2)
 			costAns.SourceID = ip
-			for i := 0; i < packetduplicates; i++ {
+			for i := 0; i < packetDuplicates; i++ {
 				CostAnswerTX <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckFOM:
 			orderRecvAck.Signature = createSignature(3)
 			orderRecvAck.SourceID = ip
-			for i := 0; i < packetduplicates; i++ {
+			for i := 0; i < packetDuplicates; i++ {
 				OrderRecvAckTX <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteFOM:
 			orderComplete.Signature = createSignature(4)
-			for i := 0; i < packetduplicates; i++ {
+			for i := 0; i < packetDuplicates; i++ {
 				OrderCompleteTX <- orderComplete
 			}
 		case <-killTransmitter:
