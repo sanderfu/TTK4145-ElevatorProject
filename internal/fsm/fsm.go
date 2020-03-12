@@ -11,8 +11,6 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/ordermanager"
 )
 
-var totalFloors int
-
 var lastFloor int
 var newFloorFlag bool
 var currentDir int
@@ -26,8 +24,7 @@ const doorTimeout = 3
 
 func FSM() {
 
-	// Add init here
-	fsmInit(4)
+	fsmInit()
 
 	for {
 		switch currentState {
@@ -43,16 +40,13 @@ func FSM() {
 	}
 }
 
-func fsmInit(numFloors int) {
-	fmt.Println("Starting FSM")
-
-	totalFloors = numFloors
+func fsmInit() {
 
 	// Wait for hardware manager to finish its setup
 	hmInitStatus := <-channels.HMInitStatusTFSM
 
 	if !hmInitStatus {
-		println("Hardware Manager failed to initialize")
+		fmt.Println("Hardware Manager failed to initialize")
 		os.Exit(1)
 	}
 
@@ -62,16 +56,12 @@ func fsmInit(numFloors int) {
 	hwmanager.SetElevatorDirection(datatypes.MotorStop)
 	currentDir = datatypes.MotorStop
 
-	fmt.Println("Came to rest at floor", lastFloor, "with last dir", currentDir)
-
 	go updateLastFloor()
 
 	currentState = datatypes.IdleState
 }
 
 func idle() {
-
-	// fmt.Println("State idle")
 
 	// Check for new orders
 	if ordermanager.QueueEmpty() {
@@ -97,11 +87,8 @@ func idle() {
 
 func moving() {
 
-	// fmt.Println("State moving")
-
 	// Check if we arrived at destination floor
 	if currentOrder.Floor == lastFloor {
-		fmt.Println("Arrived at destination floor", lastFloor)
 		hwmanager.SetElevatorDirection(datatypes.MotorStop)
 		doorOpeningTime = time.Now()
 		hwmanager.SetDoorOpenLamp(true)
@@ -114,10 +101,10 @@ func moving() {
 		channels.OrderCompleteTOM <- completedOrder
 
 		currentState = datatypes.DoorOpenState
+
 	} else if newFloorFlag == true {
 		// Check if we arrived at a new floor and there is an order there
 		if ordermanager.OrderToTakeAtFloor(lastFloor, motorDirToOrderDir(currentDir)) {
-			fmt.Println("Stopping at floor even though its not destination")
 			hwmanager.SetElevatorDirection(datatypes.MotorStop)
 			doorOpeningTime = time.Now()
 			hwmanager.SetDoorOpenLamp(true)
@@ -145,10 +132,7 @@ func motorDirToOrderDir(dir int) int {
 }
 
 func doorOpen() {
-	fmt.Println("State door open")
-
 	if time.Since(doorOpeningTime) > doorTimeout*time.Second {
-		fmt.Println("Door closing")
 		hwmanager.SetDoorOpenLamp(false)
 		currentState = datatypes.IdleState
 	}

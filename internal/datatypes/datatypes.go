@@ -89,3 +89,11 @@ type QueueOrder struct {
 	Dir              int
 	RegistrationTime time.Time
 }
+
+// Configuration struct
+type Configuration struct {
+	NumberOfFloors int
+	ElevatorPort   int
+}
+
+var Config Configuration
