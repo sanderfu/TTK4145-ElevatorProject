@@ -94,6 +94,10 @@ type QueueOrder struct {
 type Configuration struct {
 	NumberOfFloors int
 	ElevatorPort   int
+
+	NetworkPacketDuplicates          int
+	MaxUniqueSignatures              int
+	UniqueSignatureRemovalPercentage int
 }
 
 var Config Configuration
