@@ -2,6 +2,9 @@ package main
 
 import (
 	"encoding/json"
+
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/watchdog"
+
 	//"github.com/TTK4145/Network-go/network/peers"
 	//"github.com/TTK4145/Network-go/network/conn"
 	//"github.com/TTK4145/Network-go/network/bcast"
@@ -21,9 +24,9 @@ import (
 )
 
 func main() {
-
+	fmt.Println("The Process ID is: ", os.Getpid())
 	readConfig("./config.json")
-
+	go watchdog.SenderNode()
 	go networkmanager.NetworkManager()
 
 	go ordermanager.OrderManager()
