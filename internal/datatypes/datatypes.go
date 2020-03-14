@@ -70,6 +70,12 @@ type OrderComplete struct {
 	Dir       int
 }
 
+type OrderRegistered struct {
+	Signature string
+	Floor     int
+	Dir       int
+}
+
 type LightCommand struct {
 	Signature string
 	Floor     int

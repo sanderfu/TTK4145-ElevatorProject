@@ -32,6 +32,12 @@ var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComp
 //OrderCompleteRX ...
 var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
+//OrderRegisteredTX ...
+var OrderRegisteredTX chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered)
+
+//OrderRegisteredRX ...
+var OrderRegisteredRX chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered)
+
 //SWOrderTOMPrimary channel for delivering primary orders to Order Manager from Network Manager
 var SWOrderTOMPrimary chan datatypes.Order = make(chan datatypes.Order)
 
@@ -65,6 +71,12 @@ var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderCom
 //OrderCompleteFOM ...
 var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
+// OrderRegisteredFOM ...
+var OrderRegisteredFOM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)
+
+// OrderRegisteredTOM ...
+var OrderRegisteredTOM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)
+
 var KillDriverTX = make(chan struct{}, 1)
 var KillDriverRX = make(chan struct{}, 1)
 var InitDriverTX = make(chan struct{}, 1)
@@ -84,4 +96,4 @@ var HMInitStatusTFSM chan bool = make(chan bool)
 var OrderCompleteTHM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)
 
 //OrderRegisteredTHM delivers orders from Order Manager to Hardware Manager that has been registered by Primary & Backup in non-volatile memory
-var OrderRegisteredTHM chan datatypes.Order = make(chan datatypes.Order, 10)
+var OrderRegisteredTHM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)

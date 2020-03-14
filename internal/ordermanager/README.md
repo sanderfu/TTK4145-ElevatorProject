@@ -23,6 +23,7 @@ The decision has been made to merge ordermanager and queuemanager under the orde
  * Reduce the waittimes to break after 250ms instead of after 1s and test functionality on 3 Terminals - PASSED
  * Repeat the same test on 3 pcs on the sanntidssal - PASSED
  * Repeat same test on 3 PCs ont he sanntidssal w. packet loss 20% - PASSED
+ * CHANGE: Instead of sending order registered to hardwaremanager directly, send it to network and have a routine that recieves these and instruct hardware manager to set lights.
 
 ### TODO - SW Order Registration
  * Set up routine to listen for incoming SW orders
@@ -55,3 +56,6 @@ The decision has been made to merge ordermanager and queuemanager under the orde
             * Investigating on why they do not have these fields filled. Previous orders have them filled correctly
             * BUG FOUND: The "MAXCOST" value was set lower than the cost the elevator generated. FIX: Increase MAXCOST to 1000.
 
+### TODO - Resume when killed
+ * If asked to do so, load queue into memory from correct previous Process ID (pid)
+ 

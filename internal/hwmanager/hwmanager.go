@@ -66,7 +66,7 @@ func pollHWORder() {
 	}
 }
 
-func setLight(element datatypes.Order, value bool) {
+func setLight(element datatypes.OrderRegistered, value bool) {
 	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
 		value)
 }

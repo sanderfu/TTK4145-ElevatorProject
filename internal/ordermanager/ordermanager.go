@@ -27,7 +27,7 @@ var backupAppend chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
 var backupRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
 
 //OrderManager ...
-func OrderManager() {
+func OrderManager(resuming bool, lastPID string) {
 
 	//Set global values based on configuration
 	answerWaitMS = time.Duration(datatypes.Config.CostRequestTimeoutMS)
@@ -39,13 +39,24 @@ func OrderManager() {
 
 	fmt.Println("Hello go, this is Order Manager speaking!")
 
+	//If is resuming (after crash), load queues into memory
+	if resuming {
+		fmt.Println("Importing queue from crashed session")
+		dir := "/" + lastPID + "/" + "logs"
+		logger.ReadLogQueue(&primaryQueue, true, dir)
+		logger.ReadLogQueue(&backupQueue, false, dir)
+		logger.WriteLog(primaryQueue, true, "/logs/")
+		logger.WriteLog(backupQueue, false, "/logs/")
+		fmt.Println("Resume successful")
+	}
+
 	go costReqWatch()
 	go orderRegHW()
 	go orderRegSW()
 	go queueModifier()
 	go orderCompleteWatch()
 	go backupWatch()
-
+	go orderRegisteredWatch()
 }
 
 func costReqWatch() {
@@ -117,7 +128,11 @@ func orderRegHW() {
 				}
 				if ackCounter == 2 {
 					//Transmit was successful
-					channels.OrderRegisteredTHM <- order
+					var orderReg = datatypes.OrderRegistered{
+						Floor: order.Floor,
+						Dir:   order.Dir,
+					}
+					channels.OrderRegisteredFOM <- orderReg
 					break ackWaitloop
 				}
 			}
@@ -294,6 +309,14 @@ func backupWatch() {
 			}
 		}
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func orderRegisteredWatch() {
+	for {
+		orderReg := <-channels.OrderRegisteredTOM
+
+		channels.OrderRegisteredTHM <- orderReg
 	}
 }
 
