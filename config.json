@@ -1,0 +1,13 @@
+{
+    "NumberOfFloors": 4,
+    "ElevatorPort": 15657,
+
+    "NetworkPacketDuplicates": 10,
+    "MaxUniqueSignatures": 25,
+    "UniqueSignatureRemovalPercentage": 20,
+
+    "CostRequestTimeoutMS": 250,
+    "OrderReceiveAckTimeoutMS": 250,
+    "MaxCostValue": 1000,
+    "BackupTakeoverTimeoutS": 10
+}
