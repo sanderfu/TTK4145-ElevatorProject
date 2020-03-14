@@ -21,11 +21,15 @@ const (
 	backupv2 = "/backupv2.json"
 )
 
-func AssetsDir() string {
+func RootAssetsDir() string {
 	_, b, _, _ := runtime.Caller(0)
 	internalDir := path.Join(path.Dir(b))
 	projectDir := path.Join(path.Dir(internalDir))
-	return filepath.Join(filepath.Dir(projectDir), "/assets/"+strconv.Itoa(os.Getpid()))
+	return filepath.Join(filepath.Dir(projectDir), "/assets/")
+}
+
+func AssetsDir() string {
+	return filepath.Join(RootAssetsDir(), strconv.Itoa(os.Getpid()))
 }
 
 func assetExists(assetsDir string, directory string, name string) bool {

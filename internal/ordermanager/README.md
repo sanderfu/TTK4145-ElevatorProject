@@ -55,3 +55,6 @@ The decision has been made to merge ordermanager and queuemanager under the orde
             * Investigating on why they do not have these fields filled. Previous orders have them filled correctly
             * BUG FOUND: The "MAXCOST" value was set lower than the cost the elevator generated. FIX: Increase MAXCOST to 1000.
 
+### TODO - Resume when killed
+ * If asked to do so, load queue into memory from correct previous Process ID (pid)
+ 
