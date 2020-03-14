@@ -56,6 +56,7 @@ func OrderManager(resuming bool, lastPID string) {
 	go queueModifier()
 	go orderCompleteWatch()
 	go backupWatch()
+	go orderRegisteredWatch()
 }
 
 func costReqWatch() {
@@ -127,8 +128,11 @@ func orderRegHW() {
 				}
 				if ackCounter == 2 {
 					//Transmit was successful
-
-					channels.OrderRegisteredFOM <- order
+					var orderReg = datatypes.OrderRegistered{
+						Floor: order.Floor,
+						Dir:   order.Dir,
+					}
+					channels.OrderRegisteredFOM <- orderReg
 					break ackWaitloop
 				}
 			}
@@ -310,9 +314,9 @@ func backupWatch() {
 
 func orderRegisteredWatch() {
 	for {
-		order := <-channels.OrderRegisteredTOM
-		fmt.Println("Recieved OrderRegistered, forwarding to HardwareManager")
-		channels.OrderRegisteredTHM <- order
+		orderReg := <-channels.OrderRegisteredTOM
+
+		channels.OrderRegisteredTHM <- orderReg
 	}
 }
 
