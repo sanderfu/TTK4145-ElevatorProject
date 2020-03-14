@@ -127,8 +127,8 @@ func orderRegHW() {
 				}
 				if ackCounter == 2 {
 					//Transmit was successful
-					channels.OrderRegisteredTHM <- order
-					//channels.OrderRegisteredFOM <- order
+
+					channels.OrderRegisteredFOM <- order
 					break ackWaitloop
 				}
 			}
@@ -305,6 +305,14 @@ func backupWatch() {
 			}
 		}
 		time.Sleep(1 * time.Second)
+	}
+}
+
+func orderRegisteredWatch() {
+	for {
+		order := <-channels.OrderRegisteredTOM
+		fmt.Println("Recieved OrderRegistered, forwarding to HardwareManager")
+		channels.OrderRegisteredTHM <- order
 	}
 }
 
