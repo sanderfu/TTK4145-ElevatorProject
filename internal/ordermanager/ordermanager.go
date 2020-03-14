@@ -45,7 +45,13 @@ func OrderManager(resuming bool, lastPID string) {
 		dir := "/" + lastPID + "/" + "logs"
 		logger.ReadLogQueue(&primaryQueue, true, dir)
 		logger.ReadLogQueue(&backupQueue, false, dir)
+		var orderReg datatypes.OrderRegistered
 		logger.WriteLog(primaryQueue, true, "/logs/")
+		for i := 0; i < len(primaryQueue); i++ {
+			orderReg.Floor = primaryQueue[i].Floor
+			orderReg.Dir = primaryQueue[i].Dir
+			channels.OrderRegisteredFOM <- orderReg
+		}
 		logger.WriteLog(backupQueue, false, "/logs/")
 		fmt.Println("Resume successful")
 	}
