@@ -32,6 +32,12 @@ var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComp
 //OrderCompleteRX ...
 var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
 
+//OrderRegisteredTX ...
+var OrderRegisteredTX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
+//OrderRegisteredRX ...
+var OrderRegisteredRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
 //SWOrderTOMPrimary channel for delivering primary orders to Order Manager from Network Manager
 var SWOrderTOMPrimary chan datatypes.Order = make(chan datatypes.Order)
 
@@ -64,6 +70,12 @@ var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderCom
 
 //OrderCompleteFOM ...
 var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
+
+// OrderRegisteredFOM ...
+var OrderRegisteredFOM chan datatypes.Order = make(chan datatypes.Order, 10)
+
+// OrderRegisteredTOM ...
+var OrderRegisteredTOM chan datatypes.Order = make(chan datatypes.Order, 10)
 
 var KillDriverTX = make(chan struct{}, 1)
 var KillDriverRX = make(chan struct{}, 1)

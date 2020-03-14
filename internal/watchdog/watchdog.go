@@ -58,7 +58,8 @@ func watchdogCheckTimeout() {
 		if time.Since(latestMessage.UpdateTime).Milliseconds() > timeoutMS {
 			fmt.Println(time.Since(latestMessage.UpdateTime).String())
 			fmt.Println("The SenderNode is not responding!")
-			cmd := exec.Command("gnome-terminal", "-e", "./main")
+			command := "./main " + strconv.Itoa(latestMessage.PID)
+			cmd := exec.Command("gnome-terminal", "-e", command)
 			cmd.Run()
 		}
 		time.Sleep(updateTimeMS * time.Millisecond)
@@ -96,7 +97,6 @@ func WatchdogNode() {
 		// Decode buffer and unmarshal it into a WatchdogMessage
 		gobobj.Decode(msg)
 
-		fmt.Println("Receiver: ", msg.UpdateTime.String())
 		latestMessage = *msg
 
 	}
@@ -113,7 +113,6 @@ func SenderNode() {
 		msg.UpdateTime = time.Now()
 		binaryBuffer := new(bytes.Buffer)
 		gobobj := gob.NewEncoder(binaryBuffer)
-		fmt.Println("Sender: ", msg.UpdateTime.String())
 		gobobj.Encode(msg)
 
 		conn.Write(binaryBuffer.Bytes())

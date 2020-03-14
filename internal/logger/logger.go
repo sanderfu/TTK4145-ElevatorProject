@@ -83,9 +83,12 @@ func WriteLog(data interface{}, primary bool, directory string) {
 	}
 }
 
-func ReadLogQueue(data *[]datatypes.Order, primary bool, directory string) {
-	assetsDir := AssetsDir()
-	_, readFile := selectFileNames(*data, primary, assetsDir, directory)
-	file, _ := ioutil.ReadFile(filepath.Join(assetsDir, directory) + readFile)
+func ReadLogQueue(data *[]datatypes.QueueOrder, primary bool, directory string) {
+	rootAssetsDir := RootAssetsDir()
+	_, readFile := selectFileNames(*data, primary, rootAssetsDir, directory)
+	file, err := ioutil.ReadFile(filepath.Join(rootAssetsDir, directory) + readFile)
+	if err != nil {
+		fmt.Println("Error: ", err)
+	}
 	_ = json.Unmarshal([]byte(file), data)
 }
