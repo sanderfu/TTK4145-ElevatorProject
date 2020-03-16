@@ -55,7 +55,7 @@ func initWatchdogNode() (net.Listener, net.Conn) {
 
 func watchdogCheckTimeout() {
 	for {
-		if time.Since(latestMessage.UpdateTime).Milliseconds() > timeoutMS {
+		if time.Since(latestMessage.UpdateTime).Nanoseconds()/1e6 > timeoutMS {
 			fmt.Println(time.Since(latestMessage.UpdateTime).String())
 			fmt.Println("The SenderNode is not responding!")
 			command := "./main " + strconv.Itoa(latestMessage.PID)
