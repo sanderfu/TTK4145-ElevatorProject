@@ -293,16 +293,19 @@ func queueModifier() {
 
 func orderCompleteWatch() {
 	for {
-		orderComplete := <-channels.OrderCompleteTOM
-		var queueOrder datatypes.QueueOrder
-		queueOrder.Dir = orderComplete.Dir
-		fmt.Println("Forwarding remove request to queueModifier")
-		queueOrder.Floor = orderComplete.Floor
-		primaryRemove <- queueOrder
-		backupRemove <- queueOrder
-		channels.OrderCompleteTHM <- orderComplete
-		fmt.Println("The remove request has been handeled")
-
+		select {
+		case orderComplete := <-channels.OrderCompleteTOM:
+			var queueOrder datatypes.QueueOrder
+			queueOrder.Dir = orderComplete.Dir
+			fmt.Println("Forwarding remove request to queueModifier")
+			queueOrder.Floor = orderComplete.Floor
+			primaryRemove <- queueOrder
+			backupRemove <- queueOrder
+			channels.OrderCompleteTHM <- orderComplete
+			fmt.Println("The remove request has been handeled")
+		case orderComplete := <-channels.OrderCompleteFFSM:
+			channels.OrderCompleteFOM <- orderComplete
+		}
 	}
 }
 

@@ -97,3 +97,6 @@ var OrderCompleteTHM chan datatypes.OrderComplete = make(chan datatypes.OrderCom
 
 //OrderRegisteredTHM delivers orders from Order Manager to Hardware Manager that has been registered by Primary & Backup in non-volatile memory
 var OrderRegisteredTHM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)
+
+//FSM
+var OrderCompleteFFSM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)

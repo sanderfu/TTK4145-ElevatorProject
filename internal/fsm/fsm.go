@@ -98,7 +98,7 @@ func moving() {
 			Floor: currentOrder.Floor,
 			Dir:   currentOrder.Dir,
 		}
-		channels.OrderCompleteTOM <- completedOrder
+		channels.OrderCompleteFFSM <- completedOrder
 
 		currentState = datatypes.DoorOpenState
 
@@ -113,7 +113,7 @@ func moving() {
 			completedOrder := datatypes.OrderComplete{
 				Floor: lastFloor,
 			}
-			channels.OrderCompleteTOM <- completedOrder
+			channels.OrderCompleteFFSM <- completedOrder
 
 			currentState = datatypes.DoorOpenState
 		}
