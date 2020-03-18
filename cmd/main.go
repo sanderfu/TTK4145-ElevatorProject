@@ -13,6 +13,7 @@ import (
 	//"github.com/TTK4145/Network-go/network/peers"
 	//"github.com/TTK4145/Network-go/driver-go/elevio"
 
+	"flag"
 	"fmt"
 	"os"
 	"time"
@@ -24,27 +25,45 @@ import (
 )
 
 func main() {
-	fmt.Println("The Process ID is: ", os.Getpid())
-	readConfig("./config.json")
 
+	
+	// flag parsing
+	elevPortPtr := flag.String("elevport", "", "elevator server port (mandatory)")
+	watchdogPortPtr := flag.String("watchdogport", "", "watchdog port (mandatory)")
+	lastPIDPtr := flag.String("lastpid", "NONE", "process ID of last running program")
+	flag.Parse()
+	
 	args := os.Args[1:]
-	var lastPID string
+	if len(args) < 2 {
+		fmt.Println("Argument(s) missing. See -h")
+		os.Exit(1)
+	}
+	
+
+	fmt.Println("The Process ID is: ", os.Getpid())
+
 	var resuming bool
-	if len(args) > 0 {
-		lastPID = args[0]
+
+	if *lastPIDPtr != "NONE" {
 		resuming = true
 	} else {
-		lastPID = "NONE"
 		resuming = false
 	}
-	fmt.Println("PID to resume from: ", lastPID)
-	go watchdog.SenderNode()
+	fmt.Println("PID to resume from: ", *lastPIDPtr)
+
+	// config parsing
+	readConfig("./config.json")
+	
+	
+	// start managers
+	go watchdog.SenderNode(*watchdogPortPtr)
+	
 	go networkmanager.NetworkManager()
 
-	go ordermanager.OrderManager(resuming, lastPID)
+	go ordermanager.OrderManager(resuming, *lastPIDPtr)
 	//go ordermanager.ConfigureAndRunTest()
 
-	go hwmanager.HardwareManager()
+	go hwmanager.HardwareManager(*elevPortPtr)
 	go fsm.FSM()
 
 	for {

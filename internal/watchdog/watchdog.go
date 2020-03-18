@@ -17,7 +17,6 @@ type WatchdogMessage struct {
 }
 
 var latestMessage WatchdogMessage
-var connPort int = 15579
 
 const (
 	connHost = ":"
@@ -28,9 +27,9 @@ const (
 	noConnectionWaitMS = 500
 )
 
-func initSenderNode() net.Conn {
+func initSenderNode(port string) net.Conn {
 	addr := connHost
-	addr += strconv.Itoa(connPort)
+	addr += port
 
 	conn, err := net.Dial("tcp", addr)
 	if err != nil {
@@ -40,9 +39,9 @@ func initSenderNode() net.Conn {
 	return conn
 }
 
-func initWatchdogNode() (net.Listener, net.Conn) {
+func initWatchdogNode(watchdogport string) (net.Listener, net.Conn) {
 	addr := connHost
-	addr += strconv.Itoa(connPort)
+	addr += watchdogport
 	fmt.Println(addr)
 	l, _ := net.Listen("tcp", addr)
 
@@ -53,12 +52,13 @@ func initWatchdogNode() (net.Listener, net.Conn) {
 	return l, conn
 }
 
-func watchdogCheckTimeout() {
+func watchdogCheckTimeout(watchdogport string, elevport string) {
 	for {
 		if time.Since(latestMessage.UpdateTime).Nanoseconds()/1e6 > timeoutMS {
 			fmt.Println(time.Since(latestMessage.UpdateTime).String())
 			fmt.Println("The SenderNode is not responding!")
-			command := "./main " + strconv.Itoa(latestMessage.PID)
+			command := "build/elevator -lastpid " + strconv.Itoa(latestMessage.PID) + " -elevport " + elevport + " -watchdogport " + watchdogport
+			fmt.Println("Restarting software: ", command)
 			cmd := exec.Command("gnome-terminal", "-e", command)
 			cmd.Run()
 		}
@@ -66,8 +66,8 @@ func watchdogCheckTimeout() {
 	}
 }
 
-func WatchdogNode() {
-	l, conn := initWatchdogNode()
+func WatchdogNode(watchdogport string, elevport string) {
+	l, conn := initWatchdogNode(watchdogport)
 	bytebuffer := make([]byte, 500)
 
 	msg := new(WatchdogMessage)
@@ -75,7 +75,7 @@ func WatchdogNode() {
 	msg.UpdateTime = time.Now()
 	latestMessage = *msg
 
-	go watchdogCheckTimeout()
+	go watchdogCheckTimeout(watchdogport, elevport)
 
 	for {
 		_, err := conn.Read(bytebuffer)
@@ -83,7 +83,7 @@ func WatchdogNode() {
 		if err != nil {
 			conn.Close()
 			l.Close()
-			l, conn = initWatchdogNode()
+			l, conn = initWatchdogNode(watchdogport)
 		}
 
 		// Convert bytes into Buffer (implements io.Reader/io.Writer)
@@ -102,8 +102,8 @@ func WatchdogNode() {
 	}
 }
 
-func SenderNode() {
-	conn := initSenderNode()
+func SenderNode(port string) {
+	conn := initSenderNode(port)
 	defer conn.Close()
 	msg := new(WatchdogMessage)
 	msg.PID = os.Getpid()
