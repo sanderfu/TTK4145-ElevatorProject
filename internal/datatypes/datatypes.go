@@ -99,7 +99,6 @@ type QueueOrder struct {
 // Configuration struct
 type Configuration struct {
 	NumberOfFloors int
-	ElevatorPort   int
 
 	NetworkPacketDuplicates          int
 	MaxUniqueSignatures              int

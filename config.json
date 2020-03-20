@@ -1,6 +1,5 @@
 {
     "NumberOfFloors": 4,
-    "ElevatorPort": 15657,
 
     "NetworkPacketDuplicates": 10,
     "MaxUniqueSignatures": 25,
