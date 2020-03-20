@@ -95,8 +95,8 @@ func moving() {
 
 		// Tell order manager that order was completed on given floor
 		completedOrder := datatypes.OrderComplete{
-			Floor: currentOrder.Floor,
-			Dir:   currentOrder.Dir,
+			Floor:     currentOrder.Floor,
+			OrderType: currentOrder.OrderType,
 		}
 		channels.OrderCompleteFFSM <- completedOrder
 

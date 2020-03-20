@@ -49,15 +49,15 @@ func pollHWORder() {
 	for {
 		btnValue := <-btnChan
 		hwOrder := datatypes.Order{
-			Floor: btnValue.Floor,
-			Dir:   int(btnValue.Button),
+			Floor:     btnValue.Floor,
+			OrderType: int(btnValue.Button),
 		}
 		channels.OrderFHM <- hwOrder
 	}
 }
 
 func setLight(element datatypes.OrderRegistered, value bool) {
-	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
+	elevio.SetButtonLamp(elevio.ButtonType(element.OrderType), int(element.Floor),
 		value)
 }
 
