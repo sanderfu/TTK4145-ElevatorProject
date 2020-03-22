@@ -15,8 +15,6 @@ var orderRecvAckWaitMS time.Duration
 var maxCost int
 var backupWaitS time.Duration
 
-var start time.Time
-
 var primaryQueue []datatypes.QueueOrder
 var backupQueue []datatypes.QueueOrder
 
@@ -35,38 +33,56 @@ func OrderManager(resuming bool, lastPID string) {
 	maxCost = datatypes.Config.MaxCostValue
 	backupWaitS = time.Duration(datatypes.Config.BackupTakeoverTimeoutS)
 
-	start = time.Now()
-
-	fmt.Println("Hello go, this is Order Manager speaking!")
-
 	//If is resuming (after crash), load queues into memory
 	if resuming {
 		fmt.Println("Importing queue from crashed session")
 		dir := "/" + lastPID + "/" + "logs"
 		logger.ReadLogQueue(&primaryQueue, true, dir)
 		logger.ReadLogQueue(&backupQueue, false, dir)
+		var orderReg datatypes.OrderRegistered
 		logger.WriteLog(primaryQueue, true, "/logs/")
+		for i := 0; i < len(primaryQueue); i++ {
+			orderReg.Floor = primaryQueue[i].Floor
+			orderReg.OrderType = primaryQueue[i].OrderType
+			channels.OrderRegisteredFOM <- orderReg
+		}
 		logger.WriteLog(backupQueue, false, "/logs/")
 		fmt.Println("Resume successful")
 	}
 
-	go costReqWatch()
+	go costRequestListener()
 	go orderRegHW()
 	go orderRegSW()
 	go queueModifier()
 	go orderCompleteWatch()
 	go backupWatch()
+	go orderRegisteredWatch()
 }
 
-func costReqWatch() {
+////////////////////////////////////////////////////////////////////////////////
+// Cost
+////////////////////////////////////////////////////////////////////////////////
+// TODO: Find bug here
+func genCostAns(costReq datatypes.CostRequest) datatypes.CostAnswer {
+	var costAns datatypes.CostAnswer
+	costAns.DestinationID = costReq.SourceID
+	if costReq.OrderType == datatypes.INSIDE && costReq.SourceID != costReq.DestinationID {
+		costAns.CostValue = maxCost + 1
+	} else {
+		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
+	}
+	return costAns
+}
+
+func costRequestListener() {
 	var costReq datatypes.CostRequest
 	var costAns datatypes.CostAnswer
 	for {
 		costReq = <-channels.CostRequestTOM
+		//Change next 2 lines with genCostAns function
 		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
 		costAns.DestinationID = costReq.SourceID
 		channels.CostAnswerFOM <- costAns
-
 	}
 }
 
@@ -75,8 +91,9 @@ func orderRegHW() {
 		order := <-channels.OrderFHM
 
 		//Make cost request
+		// TODO: Intialize struct nicer, see fsm or hwman or something
 		var request datatypes.CostRequest
-		request.Direction = order.Dir
+		request.OrderType = order.OrderType
 		request.Floor = order.Floor
 
 		//Broadcast cost request
@@ -121,14 +138,17 @@ func orderRegHW() {
 			case orderRecvAck := <-channels.OrderRecvAckTOM:
 				if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
 					//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
-					if orderRecvAck.Floor == order.Floor && orderRecvAck.Dir == order.Dir {
+					if orderRecvAck.Floor == order.Floor && orderRecvAck.OrderType == order.OrderType {
 						ackCounter++
 					}
 				}
 				if ackCounter == 2 {
 					//Transmit was successful
-
-					channels.OrderRegisteredFOM <- order
+					var orderReg = datatypes.OrderRegistered{
+						Floor:     order.Floor,
+						OrderType: order.OrderType,
+					}
+					channels.OrderRegisteredFOM <- orderReg
 					break ackWaitloop
 				}
 			}
@@ -136,53 +156,9 @@ func orderRegHW() {
 	}
 }
 
-/*
-func ConfigureAndRunTest() {
-	fmt.Println("I am process: ", os.Getpid())
-
-	fmt.Println("Choose the cost value")
-	fmt.Scan(&costValue)
-	fmt.Println("The cost value of this process is: ", costValue)
-
-	for {
-		fmt.Println("Want to send dummy HW order?(y/n))")
-		var ans string
-		fmt.Scan(&ans)
-		if ans == "y" || ans == "" {
-			var dummyOrder datatypes.Order
-			fmt.Println("Floor: ")
-			fmt.Scan(&dummyOrder.Floor)
-			fmt.Println("Dir (1/-1):")
-			fmt.Scan(&dummyOrder.Dir)
-			fmt.Println("Sending HW order")
-			channels.OrderFHM <- dummyOrder
-		}
-		fmt.Println("Want to send dummy OrderComplete? (y/n))")
-		fmt.Scan(&ans)
-		if ans == "y" || ans == "" {
-			var dummyComplete datatypes.OrderComplete
-			fmt.Println("Floor: ")
-			fmt.Scan(&dummyComplete.Floor)
-			fmt.Println("Dir (1/-1):")
-			fmt.Scan(&dummyComplete.Dir)
-			fmt.Println("Sending OrderComplete")
-			channels.OrderCompleteFOM <- dummyComplete
-		}
-	}
-}
-*/
-/*
-func dummyCostAns(costreq datatypes.CostRequest) {
-	var costAns datatypes.CostAnswer
-	costAns.CostValue = costValue
-	costAns.DestinationID = costreq.SourceID
-	channels.CostAnswerFOM <- costAns
-}
-*/
-
 func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
 	var orderRecvAck datatypes.OrderRecvAck
-	orderRecvAck.Dir = queueOrder.Dir
+	orderRecvAck.OrderType = queueOrder.OrderType
 	orderRecvAck.Floor = queueOrder.Floor
 	orderRecvAck.DestinationID = queueOrder.SourceID
 	channels.OrderRecvAckFOM <- orderRecvAck
@@ -191,7 +167,7 @@ func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
 func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {
 	var queueOrder datatypes.QueueOrder
 	queueOrder.SourceID = order.SourceID
-	queueOrder.Dir = order.Dir
+	queueOrder.OrderType = order.OrderType
 	queueOrder.Floor = order.Floor
 	queueOrder.RegistrationTime = time.Now()
 	return queueOrder
@@ -240,13 +216,13 @@ func orderInQueue(order datatypes.QueueOrder, primary bool) bool {
 	switch primary {
 	case true:
 		for _, elem := range primaryQueue {
-			if elem.Floor == order.Floor && elem.Dir == order.Dir {
+			if elem.Floor == order.Floor && elem.OrderType == order.OrderType {
 				return true
 			}
 		}
 	case false:
 		for _, elem := range backupQueue {
-			if elem.Floor == order.Floor && elem.Dir == order.Dir {
+			if elem.Floor == order.Floor && elem.OrderType == order.OrderType {
 				return true
 			}
 		}
@@ -283,16 +259,19 @@ func queueModifier() {
 
 func orderCompleteWatch() {
 	for {
-		orderComplete := <-channels.OrderCompleteTOM
-		var queueOrder datatypes.QueueOrder
-		queueOrder.Dir = orderComplete.Dir
-		fmt.Println("Forwarding remove request to queueModifier")
-		queueOrder.Floor = orderComplete.Floor
-		primaryRemove <- queueOrder
-		backupRemove <- queueOrder
-		channels.OrderCompleteTHM <- orderComplete
-		fmt.Println("The remove request has been handeled")
-
+		select {
+		case orderComplete := <-channels.OrderCompleteTOM:
+			var queueOrder datatypes.QueueOrder
+			queueOrder.OrderType = orderComplete.OrderType
+			fmt.Println("Forwarding remove request to queueModifier")
+			queueOrder.Floor = orderComplete.Floor
+			primaryRemove <- queueOrder
+			backupRemove <- queueOrder
+			channels.OrderCompleteTHM <- orderComplete
+			fmt.Println("The remove request has been handeled")
+		case orderComplete := <-channels.OrderCompleteFFSM:
+			channels.OrderCompleteFOM <- orderComplete
+		}
 	}
 }
 
@@ -310,12 +289,13 @@ func backupWatch() {
 
 func orderRegisteredWatch() {
 	for {
-		order := <-channels.OrderRegisteredTOM
-		fmt.Println("Recieved OrderRegistered, forwarding to HardwareManager")
-		channels.OrderRegisteredTHM <- order
+		orderReg := <-channels.OrderRegisteredTOM
+
+		channels.OrderRegisteredTHM <- orderReg
 	}
 }
 
+//Worker functions
 func GetFirstOrderInQueue() datatypes.QueueOrder {
 	return primaryQueue[0]
 }
@@ -328,14 +308,12 @@ func QueueEmpty() bool {
 	}
 }
 
-func OrderToTakeAtFloor(floor int, dir int) bool {
+func OrderToTakeAtFloor(floor int, ordertype int) bool {
 
 	for _, order := range primaryQueue {
-		if order.Floor == floor && (order.Dir == dir || order.Dir == datatypes.INSIDE) {
+		if order.Floor == floor && (order.OrderType == ordertype || order.OrderType == datatypes.INSIDE) {
 			return true
 		}
 	}
 	return false
 }
-
-// TODO: Make function for checking if elevator should stop at floor

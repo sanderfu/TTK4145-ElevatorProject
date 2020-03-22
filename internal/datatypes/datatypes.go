@@ -34,10 +34,11 @@ const (
 //  will be received as zero-values over the network.
 
 type CostRequest struct {
-	Signature string //Used by networkmanager to remove duplicates
-	SourceID  string //ID of sender, to direct answer back.
-	Floor     int
-	Direction int
+	Signature     string //Used by networkmanager to remove duplicates
+	SourceID      string //ID of sender, to direct answer back.
+	DestinationID string //ID of answer receiver
+	Floor         int
+	OrderType     int
 }
 
 type CostAnswer struct {
@@ -53,7 +54,7 @@ type Order struct {
 	PrimaryID string
 	BackupID  string
 	Floor     int
-	Dir       int
+	OrderType int
 }
 
 type OrderRecvAck struct {
@@ -61,19 +62,25 @@ type OrderRecvAck struct {
 	SourceID      string
 	DestinationID string
 	Floor         int
-	Dir           int
+	OrderType     int
 }
 
 type OrderComplete struct {
 	Signature string
 	Floor     int
-	Dir       int
+	OrderType int
+}
+
+type OrderRegistered struct {
+	Signature string
+	Floor     int
+	OrderType int
 }
 
 type LightCommand struct {
 	Signature string
 	Floor     int
-	Dir       int
+	OrderType int
 }
 
 type NWMMode int
@@ -86,14 +93,13 @@ const (
 type QueueOrder struct {
 	SourceID         string
 	Floor            int
-	Dir              int
+	OrderType        int
 	RegistrationTime time.Time
 }
 
 // Configuration struct
 type Configuration struct {
 	NumberOfFloors int
-	ElevatorPort   int
 
 	NetworkPacketDuplicates          int
 	MaxUniqueSignatures              int

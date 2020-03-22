@@ -1,10 +1,6 @@
 package hwmanager
 
 import (
-	"fmt"
-	"strconv"
-
-	"github.com/TTK4145/Network-go/network/localip"
 	"github.com/TTK4145/driver-go/elevio"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
@@ -12,22 +8,16 @@ import (
 
 var numberOfFloors int
 
-func HardwareManager() {
-	setup()
+func HardwareManager(port string) {
+	setup(port)
 
 	go pollCurrentFloor()
 	go pollHWORder()
 	go lightWatch()
 }
 
-func setup() {
-	addr, err := localip.LocalIP()
-
-	if err != nil {
-		fmt.Println("Error: hwmanager (setup):", err)
-	}
-
-	addr += ":" + strconv.Itoa(datatypes.Config.ElevatorPort)
+func setup(port string) {
+	addr := ":" + port
 	numberOfFloors = datatypes.Config.NumberOfFloors
 	elevio.Init(addr, numberOfFloors)
 
@@ -59,15 +49,15 @@ func pollHWORder() {
 	for {
 		btnValue := <-btnChan
 		hwOrder := datatypes.Order{
-			Floor: btnValue.Floor,
-			Dir:   int(btnValue.Button),
+			Floor:     btnValue.Floor,
+			OrderType: int(btnValue.Button),
 		}
 		channels.OrderFHM <- hwOrder
 	}
 }
 
-func setLight(element datatypes.Order, value bool) {
-	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
+func setLight(element datatypes.OrderRegistered, value bool) {
+	elevio.SetButtonLamp(elevio.ButtonType(element.OrderType), int(element.Floor),
 		value)
 }
 

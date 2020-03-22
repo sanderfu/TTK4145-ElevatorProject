@@ -58,4 +58,14 @@ The decision has been made to merge ordermanager and queuemanager under the orde
 
 ### TODO - Resume when killed
  * If asked to do so, load queue into memory from correct previous Process ID (pid)
+
+
+### TODO
+* Get rid of `if resuming`. Make this just load the queue and if there was no file
+then just don't load anything. Make it a function `omInit` which also sets up the global variables. 
+Also delete this from main
+* Find bug in `genCostAns` and update `costReqWatch` to call this function
+* Group similar functions together and add 80 / below and above, see cost
+
+
  

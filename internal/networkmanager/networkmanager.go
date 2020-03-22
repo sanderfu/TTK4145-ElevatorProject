@@ -129,7 +129,7 @@ func printRecentSignatures() {
 
 //transmitter Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
-	go bcast.Transmitter(port, mode, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX)
+	go bcast.Transmitter(port, mode, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX, OrderRegisteredTX)
 	for {
 		select {
 		case order := <-SWOrderFOM:
@@ -161,6 +161,11 @@ func transmitter(port int) {
 			for i := 0; i < packetDuplicates; i++ {
 				OrderCompleteTX <- orderComplete
 			}
+		case orderRegistered := <-OrderRegisteredFOM:
+			orderRegistered.Signature = createSignature(5)
+			for i := 0; i < packetDuplicates; i++ {
+				OrderRegisteredTX <- orderRegistered
+			}
 		case <-killTransmitter:
 			KillDriverTX <- struct{}{}
 			initTransmitter <- struct{}{}
@@ -170,7 +175,7 @@ func transmitter(port int) {
 }
 
 func receiver(port int) {
-	go bcast.Receiver(port, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX)
+	go bcast.Receiver(port, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX, OrderRegisteredRX)
 	for {
 		select {
 		case order := <-SWOrderRX:
@@ -205,6 +210,10 @@ func receiver(port int) {
 		case orderComplete := <-OrderCompleteRX:
 			if !checkDuplicate(orderComplete.Signature) {
 				OrderCompleteTOM <- orderComplete
+			}
+		case orderRegistered := <-OrderRegisteredRX:
+			if !checkDuplicate(orderRegistered.Signature) {
+				OrderRegisteredTOM <- orderRegistered
 			}
 		case <-killReceiver:
 			KillDriverRX <- struct{}{}
