@@ -15,8 +15,7 @@ var orderRecvAckWaitMS time.Duration
 var maxCost int
 var backupWaitS time.Duration
 
-var primaryQueue []datatypes.QueueOrder
-var backupQueue []datatypes.QueueOrder
+var start time.Time
 
 var primaryAppend chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
 var primaryRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
@@ -32,6 +31,8 @@ func OrderManager(resuming bool, lastPID string) {
 	orderRecvAckWaitMS = time.Duration(datatypes.Config.OrderReceiveAckTimeoutMS)
 	maxCost = datatypes.Config.MaxCostValue
 	backupWaitS = time.Duration(datatypes.Config.BackupTakeoverTimeoutS)
+
+	start = time.Now()
 
 	//If is resuming (after crash), load queues into memory
 	if resuming {
@@ -50,7 +51,7 @@ func OrderManager(resuming bool, lastPID string) {
 		fmt.Println("Resume successful")
 	}
 
-	go costRequestListener()
+	go costReqWatch()
 	go orderRegHW()
 	go orderRegSW()
 	go queueModifier()
@@ -59,39 +60,11 @@ func OrderManager(resuming bool, lastPID string) {
 	go orderRegisteredWatch()
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// Cost
-////////////////////////////////////////////////////////////////////////////////
-// TODO: Find bug here
-func genCostAns(costReq datatypes.CostRequest) datatypes.CostAnswer {
-	var costAns datatypes.CostAnswer
-	costAns.DestinationID = costReq.SourceID
-	if costReq.OrderType == datatypes.INSIDE && costReq.SourceID != costReq.DestinationID {
-		costAns.CostValue = maxCost + 1
-	} else {
-		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
-	}
-	return costAns
-}
-
-func costRequestListener() {
-	var costReq datatypes.CostRequest
-	var costAns datatypes.CostAnswer
-	for {
-		costReq = <-channels.CostRequestTOM
-		//Change next 2 lines with genCostAns function
-		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
-		costAns.DestinationID = costReq.SourceID
-		channels.CostAnswerFOM <- costAns
-	}
-}
-
 func orderRegHW() {
 	for {
 		order := <-channels.OrderFHM
 
 		//Make cost request
-		// TODO: Intialize struct nicer, see fsm or hwman or something
 		var request datatypes.CostRequest
 		request.OrderType = order.OrderType
 		request.Floor = order.Floor
@@ -186,77 +159,6 @@ func orderRegSW() {
 	}
 }
 
-func removeFromQueue(order datatypes.QueueOrder, primary bool) {
-	var queue []datatypes.QueueOrder
-	switch primary {
-	case true:
-		queue = primaryQueue
-	case false:
-		queue = backupQueue
-	}
-
-	j := 0
-	for _, element := range queue {
-		if order.Floor != element.Floor {
-			queue[j] = element
-			j++
-		}
-	}
-
-	queue = queue[:j]
-	switch primary {
-	case true:
-		primaryQueue = queue
-	case false:
-		backupQueue = queue
-	}
-}
-
-func orderInQueue(order datatypes.QueueOrder, primary bool) bool {
-	switch primary {
-	case true:
-		for _, elem := range primaryQueue {
-			if elem.Floor == order.Floor && elem.OrderType == order.OrderType {
-				return true
-			}
-		}
-	case false:
-		for _, elem := range backupQueue {
-			if elem.Floor == order.Floor && elem.OrderType == order.OrderType {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func queueModifier() {
-	for {
-		select {
-		case primaryOrder := <-primaryAppend:
-			primary := true
-			if !orderInQueue(primaryOrder, primary) {
-				primaryQueue = append(primaryQueue, primaryOrder)
-				logger.WriteLog(primaryQueue, primary, "/logs/")
-				generateOrderRecvAck(primaryOrder)
-			}
-		case primaryOrder := <-primaryRemove:
-			primary := true
-			removeFromQueue(primaryOrder, primary)
-			logger.WriteLog(primaryQueue, primary, "/logs/")
-		case backupOrder := <-backupAppend:
-			primary := false
-			backupQueue = append(backupQueue, backupOrder)
-			logger.WriteLog(backupQueue, primary, "/logs/")
-			generateOrderRecvAck(backupOrder)
-		case backupOrder := <-backupRemove:
-			primary := false
-			removeFromQueue(backupOrder, primary)
-			logger.WriteLog(backupQueue, primary, "/logs/")
-		}
-	}
-}
-
 func orderCompleteWatch() {
 	for {
 		select {
@@ -275,45 +177,10 @@ func orderCompleteWatch() {
 	}
 }
 
-func backupWatch() {
-	for {
-		for _, elem := range backupQueue {
-			if time.Since(elem.RegistrationTime) > backupWaitS*time.Second {
-				backupRemove <- elem
-				primaryAppend <- elem
-			}
-		}
-		time.Sleep(1 * time.Second)
-	}
-}
-
 func orderRegisteredWatch() {
 	for {
 		orderReg := <-channels.OrderRegisteredTOM
 
 		channels.OrderRegisteredTHM <- orderReg
 	}
-}
-
-//Worker functions
-func GetFirstOrderInQueue() datatypes.QueueOrder {
-	return primaryQueue[0]
-}
-
-func QueueEmpty() bool {
-	if len(primaryQueue) == 0 {
-		return true
-	} else {
-		return false
-	}
-}
-
-func OrderToTakeAtFloor(floor int, ordertype int) bool {
-
-	for _, order := range primaryQueue {
-		if order.Floor == floor && (order.OrderType == ordertype || order.OrderType == datatypes.INSIDE) {
-			return true
-		}
-	}
-	return false
 }
