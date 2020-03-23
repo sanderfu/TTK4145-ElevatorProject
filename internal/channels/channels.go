@@ -42,10 +42,10 @@ var KillDriverRX = make(chan struct{}, 1)
 var InitDriverTX = make(chan struct{}, 1)
 var InitDriverRX = make(chan struct{}, 1)
 
-var PrimaryQueueAppend = make(chan datatypes.QueueOrder)
-var PrimaryQueueRemove = make(chan datatypes.QueueOrder)
-var BackupQueueAppend = make(chan datatypes.QueueOrder)
-var BackupQueueRemove = make(chan datatypes.QueueOrder)
+var PrimaryQueueAppend = make(chan datatypes.QueueOrder, 1)
+var PrimaryQueueRemove = make(chan datatypes.QueueOrder, 1)
+var BackupQueueAppend = make(chan datatypes.QueueOrder, 1)
+var BackupQueueRemove = make(chan datatypes.QueueOrder, 1)
 
 ////////////////////////////////////////////////////////////////////////////////
 // Hardware manager channels
