@@ -4,38 +4,33 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 )
 
-var answerWaitMS time.Duration
+var costRequestTimeoutMS time.Duration
 var orderRecvAckWaitMS time.Duration
-var maxCost int
-var backupWaitS time.Duration
+var maxCostValue int
+var backupTakeoverTimeoutS time.Duration
 
 var start time.Time
 
-var primaryAppend chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
-var primaryRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
-
-var backupAppend chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
-var backupRemove chan datatypes.QueueOrder = make(chan datatypes.QueueOrder)
-
 //OrderManager ...
-func OrderManager(resuming bool, lastPID string) {
+func OrderManager(lastPID string) {
 
 	//Set global values based on configuration
-	answerWaitMS = time.Duration(datatypes.Config.CostRequestTimeoutMS)
-	orderRecvAckWaitMS = time.Duration(datatypes.Config.OrderReceiveAckTimeoutMS)
-	maxCost = datatypes.Config.MaxCostValue
-	backupWaitS = time.Duration(datatypes.Config.BackupTakeoverTimeoutS)
+	costRequestTimeoutMS = time.Duration(configuration.Config.CostRequestTimeoutMS)
+	orderRecvAckWaitMS = time.Duration(configuration.Config.OrderReceiveAckTimeoutMS)
+	maxCostValue = configuration.Config.MaxCostValue
+	backupTakeoverTimeoutS = time.Duration(configuration.Config.BackupTakeoverTimeoutS)
 
 	start = time.Now()
 
 	//If is resuming (after crash), load queues into memory
-	if resuming {
+	if lastPID != "NONE" {
 		fmt.Println("Importing queue from crashed session")
 		dir := "/" + lastPID + "/" + "logs"
 		logger.ReadLogQueue(&primaryQueue, true, dir)
@@ -73,9 +68,9 @@ func orderRegistrationHW() {
 		channels.CostRequestFOM <- request
 
 		//Wait for answers
-		done := time.After(answerWaitMS * time.Millisecond)
-		primaryCost := maxCost + 1
-		backupCost := maxCost + 1
+		done := time.After(costRequestTimeoutMS * time.Millisecond)
+		primaryCost := maxCostValue + 1
+		backupCost := maxCostValue + 1
 	costWaitloop:
 		for {
 			select {
@@ -94,7 +89,7 @@ func orderRegistrationHW() {
 			}
 		}
 		//Handle situation with no backup
-		if backupCost == maxCost+1 {
+		if backupCost == maxCostValue+1 {
 			order.BackupID = order.PrimaryID
 		}
 		channels.SWOrderFOM <- order
@@ -151,10 +146,10 @@ func orderRegistrationSW() {
 		select {
 		case order := <-channels.SWOrderFNMPrimary:
 			queueOrder := generateQueueOrder(order)
-			primaryAppend <- queueOrder
+			channels.PrimaryQueueAppend <- queueOrder
 		case order := <-channels.SWOrderFNMBackup:
 			queueOrder := generateQueueOrder(order)
-			backupAppend <- queueOrder
+			channels.BackupQueueAppend <- queueOrder
 		}
 	}
 }
@@ -167,8 +162,8 @@ func orderCompleteListener() {
 			queueOrder.OrderType = orderComplete.OrderType
 			fmt.Println("Forwarding remove request to queueModifier")
 			queueOrder.Floor = orderComplete.Floor
-			primaryRemove <- queueOrder
-			backupRemove <- queueOrder
+			channels.PrimaryQueueRemove <- queueOrder
+			channels.BackupQueueRemove <- queueOrder
 			channels.ClearLightsFOM <- orderComplete
 			fmt.Println("The remove request has been handeled")
 		case orderComplete := <-channels.OrderCompleteFFSM:

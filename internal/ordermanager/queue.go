@@ -3,6 +3,7 @@ package ordermanager
 import (
 	"time"
 
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
 )
@@ -34,23 +35,23 @@ func orderInQueue(queue *[]datatypes.QueueOrder, order datatypes.QueueOrder) boo
 func queueModifier() {
 	for {
 		select {
-		case primaryOrder := <-primaryAppend:
+		case primaryOrder := <-channels.PrimaryQueueAppend:
 			primary := true
 			if !orderInQueue(&primaryQueue, primaryOrder) {
 				primaryQueue = append(primaryQueue, primaryOrder)
 				logger.WriteLog(primaryQueue, primary, "/logs/")
 				generateOrderRecvAck(primaryOrder)
 			}
-		case primaryOrder := <-primaryRemove:
+		case primaryOrder := <-channels.PrimaryQueueRemove:
 			primary := true
 			removeFromQueue(&primaryQueue, primaryOrder)
 			logger.WriteLog(primaryQueue, primary, "/logs/")
-		case backupOrder := <-backupAppend:
+		case backupOrder := <-channels.BackupQueueAppend:
 			primary := false
 			backupQueue = append(backupQueue, backupOrder)
 			logger.WriteLog(backupQueue, primary, "/logs/")
 			generateOrderRecvAck(backupOrder)
-		case backupOrder := <-backupRemove:
+		case backupOrder := <-channels.BackupQueueRemove:
 			primary := false
 			removeFromQueue(&backupQueue, backupOrder)
 			logger.WriteLog(backupQueue, primary, "/logs/")
@@ -73,7 +74,7 @@ func QueueEmpty() bool {
 func OrderToTakeAtFloor(floor int, ordertype int) bool {
 
 	for _, order := range primaryQueue {
-		if order.Floor == floor && (order.OrderType == ordertype || order.OrderType == datatypes.INSIDE) {
+		if order.Floor == floor && (order.OrderType == ordertype || order.OrderType == datatypes.OrderInside) {
 			return true
 		}
 	}
@@ -83,9 +84,9 @@ func OrderToTakeAtFloor(floor int, ordertype int) bool {
 func backupListener() {
 	for {
 		for _, elem := range backupQueue {
-			if time.Since(elem.RegistrationTime) > backupWaitS*time.Second {
-				backupRemove <- elem
-				primaryAppend <- elem
+			if time.Since(elem.RegistrationTime) > backupTakeoverTimeoutS*time.Second {
+				channels.BackupQueueRemove <- elem
+				channels.PrimaryQueueAppend <- elem
 			}
 		}
 		time.Sleep(1 * time.Second)

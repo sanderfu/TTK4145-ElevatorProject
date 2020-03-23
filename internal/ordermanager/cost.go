@@ -8,8 +8,8 @@ import (
 func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	var costAns datatypes.CostAnswer
 	costAns.DestinationID = costReq.SourceID
-	if costReq.OrderType == datatypes.INSIDE && costReq.SourceID != costReq.DestinationID {
-		costAns.CostValue = maxCost + 1
+	if costReq.OrderType == datatypes.OrderInside && costReq.SourceID != costReq.DestinationID {
+		costAns.CostValue = maxCostValue + 1
 	} else {
 		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
 	}

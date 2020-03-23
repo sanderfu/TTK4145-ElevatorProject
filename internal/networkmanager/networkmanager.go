@@ -9,6 +9,7 @@ import (
 	"github.com/TTK4145/Network-go/network/bcast"
 	"github.com/TTK4145/Network-go/network/localip"
 	. "github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
@@ -34,9 +35,9 @@ var initReceiver = make(chan struct{}, 1)
 //NetworkManager to start networkmanager routine.
 func NetworkManager() {
 	//Update global variables based on configuration
-	packetDuplicates = datatypes.Config.NetworkPacketDuplicates
-	maxUniqueSignatures = datatypes.Config.MaxUniqueSignatures
-	removePercent = datatypes.Config.UniqueSignatureRemovalPercentage
+	packetDuplicates = configuration.Config.NetworkPacketDuplicates
+	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
+	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
 
 	//Start timer used for signatures
 	start = time.Now()

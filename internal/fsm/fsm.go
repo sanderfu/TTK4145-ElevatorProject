@@ -123,11 +123,11 @@ func moving() {
 
 func motorDirToOrderDir(dir int) int {
 	if dir == datatypes.MotorUp {
-		return datatypes.UP
+		return datatypes.OrderUp
 	} else if dir == datatypes.MotorDown {
-		return datatypes.DOWN
+		return datatypes.OrderDown
 	} else {
-		return datatypes.INSIDE
+		return datatypes.OrderInside
 	}
 }
 
