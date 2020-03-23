@@ -26,7 +26,7 @@ func setup(port string) {
 	}
 	SetDoorOpenLamp(false)
 
-	channels.HMInitStatusTFSM <- true
+	channels.HMInitStatusFHM <- true
 }
 
 func pollCurrentFloor() {
@@ -37,7 +37,7 @@ func pollCurrentFloor() {
 	for {
 		floor := <-floorSensorChan
 		elevio.SetFloorIndicator(floor)
-		channels.CurrentFloorTFSM <- floor
+		channels.CurrentFloorFHM <- floor
 	}
 }
 
@@ -82,9 +82,9 @@ func SetDoorOpenLamp(value bool) {
 func lightWatch() {
 	for {
 		select {
-		case orderComplete := <-channels.OrderCompleteTHM:
+		case orderComplete := <-channels.ClearLightsFOM:
 			setAllLightsAtFloor(orderComplete.Floor, false)
-		case orderRegistered := <-channels.OrderRegisteredTHM:
+		case orderRegistered := <-channels.SetLightsFOM:
 			setLight(orderRegistered, true)
 		}
 	}

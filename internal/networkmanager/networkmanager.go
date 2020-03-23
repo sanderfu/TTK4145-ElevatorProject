@@ -181,39 +181,39 @@ func receiver(port int) {
 		case order := <-SWOrderRX:
 			if !checkDuplicate(order.Signature) {
 				if order.PrimaryID == ip && order.BackupID == ip {
-					SWOrderTOMPrimary <- order
-					SWOrderTOMBackup <- order
+					SWOrderFNMPrimary <- order
+					SWOrderFNMBackup <- order
 				} else if order.PrimaryID == ip {
-					SWOrderTOMPrimary <- order
+					SWOrderFNMPrimary <- order
 				} else if order.BackupID == ip {
-					SWOrderTOMBackup <- order
+					SWOrderFNMBackup <- order
 				}
 			}
 		case costReq := <-CostRequestRX:
 			if !checkDuplicate(costReq.Signature) {
-				CostRequestTOM <- costReq
+				CostRequestFNM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
 			if costAns.DestinationID != ip {
 				continue
 			}
 			if !checkDuplicate(costAns.Signature) {
-				CostAnswerTOM <- costAns
+				CostAnswerFNM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:
 			if orderRecvAck.DestinationID != ip {
 				continue
 			}
 			if !checkDuplicate(orderRecvAck.Signature) {
-				OrderRecvAckTOM <- orderRecvAck
+				OrderRecvAckFNM <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteRX:
 			if !checkDuplicate(orderComplete.Signature) {
-				OrderCompleteTOM <- orderComplete
+				OrderCompleteFNM <- orderComplete
 			}
 		case orderRegistered := <-OrderRegisteredRX:
 			if !checkDuplicate(orderRegistered.Signature) {
-				OrderRegisteredTOM <- orderRegistered
+				OrderRegisteredFNM <- orderRegistered
 			}
 		case <-killReceiver:
 			KillDriverRX <- struct{}{}

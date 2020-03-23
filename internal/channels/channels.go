@@ -2,101 +2,58 @@ package channels
 
 import "github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 
-//SWOrderTX for transmitting to network via driver
-var SWOrderTX chan datatypes.Order = make(chan datatypes.Order)
+////////////////////////////////////////////////////////////////////////////////
+// Network driver channels
+////////////////////////////////////////////////////////////////////////////////
 
-//SWOrderRX for recieveing from network via driver
-var SWOrderRX chan datatypes.Order = make(chan datatypes.Order)
+var SWOrderTX = make(chan datatypes.Order, 1)
+var SWOrderRX = make(chan datatypes.Order, 1)
+var CostRequestTX = make(chan datatypes.CostRequest, 1)
+var CostRequestRX = make(chan datatypes.CostRequest, 1)
+var CostAnswerTX = make(chan datatypes.CostAnswer, 1)
+var CostAnswerRX = make(chan datatypes.CostAnswer, 1)
+var OrderRecvAckTX = make(chan datatypes.OrderRecvAck, 1)
+var OrderRecvAckRX = make(chan datatypes.OrderRecvAck, 1)
+var OrderCompleteTX = make(chan datatypes.OrderComplete, 1)
+var OrderCompleteRX = make(chan datatypes.OrderComplete, 1)
+var OrderRegisteredTX = make(chan datatypes.OrderRegistered, 1)
+var OrderRegisteredRX = make(chan datatypes.OrderRegistered, 1)
 
-//CostRequestTX for transmitting to network via driver
-var CostRequestTX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
+////////////////////////////////////////////////////////////////////////////////
+// Order manager channels
+////////////////////////////////////////////////////////////////////////////////
 
-//CostRequestRX for recieveing from network via driver
-var CostRequestRX chan datatypes.CostRequest = make(chan datatypes.CostRequest)
-
-//CostAnswerTX for transmitting to network via driver
-var CostAnswerTX chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//CostAnswerRX for recieveing from network via driver
-var CostAnswerRX chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//OrderRecvAckTX ...
-var OrderRecvAckTX chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderRecvAckRX ...
-var OrderRecvAckRX chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderCompleteTX ...
-var OrderCompleteTX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
-
-//OrderCompleteRX ...
-var OrderCompleteRX chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
-
-//OrderRegisteredTX ...
-var OrderRegisteredTX chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered)
-
-//OrderRegisteredRX ...
-var OrderRegisteredRX chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered)
-
-//SWOrderTOMPrimary channel for delivering primary orders to Order Manager from Network Manager
-var SWOrderTOMPrimary chan datatypes.Order = make(chan datatypes.Order)
-
-//SWOrderTOMBackup is channel for delivering backup orders to Order Manager from Network manager
-var SWOrderTOMBackup chan datatypes.Order = make(chan datatypes.Order)
-
-//SWOrderFOM channel from Order Manager to Network Manager
-var SWOrderFOM chan datatypes.Order = make(chan datatypes.Order)
-
-//CostRequestTOM ...
-var CostRequestTOM chan datatypes.CostRequest = make(chan datatypes.CostRequest, 10)
-
-//CostRequestFOM ...
-var CostRequestFOM chan datatypes.CostRequest = make(chan datatypes.CostRequest)
-
-//CostAnswerTOM ...
-var CostAnswerTOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer, 10)
-
-//CostAnswerFOM ...
-var CostAnswerFOM chan datatypes.CostAnswer = make(chan datatypes.CostAnswer)
-
-//OrderRecvAckTOM ...
-var OrderRecvAckTOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck, 10)
-
-//OrderRecvAckFOM ...
-var OrderRecvAckFOM chan datatypes.OrderRecvAck = make(chan datatypes.OrderRecvAck)
-
-//OrderCompleteTOM ...
-var OrderCompleteTOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)
-
-//OrderCompleteFOM ...
-var OrderCompleteFOM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete)
-
-// OrderRegisteredFOM ...
-var OrderRegisteredFOM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)
-
-// OrderRegisteredTOM ...
-var OrderRegisteredTOM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)
+var SWOrderFNMPrimary = make(chan datatypes.Order, 1)
+var SWOrderFNMBackup = make(chan datatypes.Order, 1)
+var SWOrderFOM = make(chan datatypes.Order, 1)
+var CostRequestFNM = make(chan datatypes.CostRequest, 10)
+var CostRequestFOM = make(chan datatypes.CostRequest, 1)
+var CostAnswerFNM = make(chan datatypes.CostAnswer, 10)
+var CostAnswerFOM = make(chan datatypes.CostAnswer, 1)
+var OrderRecvAckFNM = make(chan datatypes.OrderRecvAck, 10)
+var OrderRecvAckFOM = make(chan datatypes.OrderRecvAck, 1)
+var OrderCompleteFNM = make(chan datatypes.OrderComplete, 10)
+var OrderCompleteFOM = make(chan datatypes.OrderComplete, 1)
+var OrderRegisteredFOM = make(chan datatypes.OrderRegistered, 10)
+var OrderRegisteredFNM = make(chan datatypes.OrderRegistered, 10)
 
 var KillDriverTX = make(chan struct{}, 1)
 var KillDriverRX = make(chan struct{}, 1)
 var InitDriverTX = make(chan struct{}, 1)
 var InitDriverRX = make(chan struct{}, 1)
 
-//Hardware manager
+////////////////////////////////////////////////////////////////////////////////
+// Hardware manager channels
+////////////////////////////////////////////////////////////////////////////////
 
-//OrderFHM delivers orders from Hardware Manager to Order Manager
-var OrderFHM chan datatypes.Order = make(chan datatypes.Order, 10)
+var OrderFHM = make(chan datatypes.Order, 10)
+var CurrentFloorFHM = make(chan int, 1)
+var HMInitStatusFHM = make(chan bool, 1)
+var ClearLightsFOM = make(chan datatypes.OrderComplete, 10)
+var SetLightsFOM = make(chan datatypes.OrderRegistered, 10)
 
-var CurrentFloorTFSM chan int = make(chan int)
+////////////////////////////////////////////////////////////////////////////////
+// FSM channels
+////////////////////////////////////////////////////////////////////////////////
 
-// Channel to send init status to FSM from HM
-var HMInitStatusTFSM chan bool = make(chan bool)
-
-//OrderCompleteTHM delivers order complete messages from Order Manager to Hardware manager to clear lights
-var OrderCompleteTHM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)
-
-//OrderRegisteredTHM delivers orders from Order Manager to Hardware Manager that has been registered by Primary & Backup in non-volatile memory
-var OrderRegisteredTHM chan datatypes.OrderRegistered = make(chan datatypes.OrderRegistered, 10)
-
-//FSM
-var OrderCompleteFFSM chan datatypes.OrderComplete = make(chan datatypes.OrderComplete, 10)
+var OrderCompleteFFSM = make(chan datatypes.OrderComplete, 10)

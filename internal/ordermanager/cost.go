@@ -5,7 +5,7 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
-func genCostAns(costReq datatypes.CostRequest) datatypes.CostAnswer {
+func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	var costAns datatypes.CostAnswer
 	costAns.DestinationID = costReq.SourceID
 	if costReq.OrderType == datatypes.INSIDE && costReq.SourceID != costReq.DestinationID {
@@ -17,11 +17,11 @@ func genCostAns(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	return costAns
 }
 
-func costReqListener() {
+func costRequestListener() {
 	var costReq datatypes.CostRequest
 	var costAns datatypes.CostAnswer
 	for {
-		costReq = <-channels.CostRequestTOM
+		costReq = <-channels.CostRequestFNM
 		costAns.CostValue = 2*len(primaryQueue) + 1*len(backupQueue)
 		costAns.DestinationID = costReq.SourceID
 		channels.CostAnswerFOM <- costAns

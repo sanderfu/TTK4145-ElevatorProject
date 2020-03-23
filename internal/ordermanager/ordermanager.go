@@ -51,16 +51,16 @@ func OrderManager(resuming bool, lastPID string) {
 		fmt.Println("Resume successful")
 	}
 
-	go costReqListener()
-	go orderRegHW()
-	go orderRegSW()
+	go costRequestListener()
+	go orderRegistrationHW()
+	go orderRegistrationSW()
 	go queueModifier()
 	go orderCompleteListener()
 	go backupListener()
 	go orderRegisteredListener()
 }
 
-func orderRegHW() {
+func orderRegistrationHW() {
 	for {
 		order := <-channels.OrderFHM
 
@@ -81,7 +81,7 @@ func orderRegHW() {
 			select {
 			case <-done:
 				break costWaitloop
-			case costAns := <-channels.CostAnswerTOM:
+			case costAns := <-channels.CostAnswerFNM:
 				if costAns.CostValue < primaryCost {
 					backupCost = primaryCost
 					primaryCost = costAns.CostValue
@@ -108,7 +108,7 @@ func orderRegHW() {
 				//Timer reached end, the order transmit is assumed to have failed and order is put back into the channel
 				channels.OrderFHM <- order
 				break ackWaitloop
-			case orderRecvAck := <-channels.OrderRecvAckTOM:
+			case orderRecvAck := <-channels.OrderRecvAckFNM:
 				if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
 					//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
 					if orderRecvAck.Floor == order.Floor && orderRecvAck.OrderType == order.OrderType {
@@ -146,13 +146,13 @@ func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {
 	return queueOrder
 }
 
-func orderRegSW() {
+func orderRegistrationSW() {
 	for {
 		select {
-		case order := <-channels.SWOrderTOMPrimary:
+		case order := <-channels.SWOrderFNMPrimary:
 			queueOrder := generateQueueOrder(order)
 			primaryAppend <- queueOrder
-		case order := <-channels.SWOrderTOMBackup:
+		case order := <-channels.SWOrderFNMBackup:
 			queueOrder := generateQueueOrder(order)
 			backupAppend <- queueOrder
 		}
@@ -162,14 +162,14 @@ func orderRegSW() {
 func orderCompleteListener() {
 	for {
 		select {
-		case orderComplete := <-channels.OrderCompleteTOM:
+		case orderComplete := <-channels.OrderCompleteFNM:
 			var queueOrder datatypes.QueueOrder
 			queueOrder.OrderType = orderComplete.OrderType
 			fmt.Println("Forwarding remove request to queueModifier")
 			queueOrder.Floor = orderComplete.Floor
 			primaryRemove <- queueOrder
 			backupRemove <- queueOrder
-			channels.OrderCompleteTHM <- orderComplete
+			channels.ClearLightsFOM <- orderComplete
 			fmt.Println("The remove request has been handeled")
 		case orderComplete := <-channels.OrderCompleteFFSM:
 			channels.OrderCompleteFOM <- orderComplete
@@ -179,8 +179,8 @@ func orderCompleteListener() {
 
 func orderRegisteredListener() {
 	for {
-		orderReg := <-channels.OrderRegisteredTOM
+		orderReg := <-channels.OrderRegisteredFNM
 
-		channels.OrderRegisteredTHM <- orderReg
+		channels.SetLightsFOM <- orderReg
 	}
 }
