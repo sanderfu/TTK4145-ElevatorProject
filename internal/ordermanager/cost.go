@@ -17,7 +17,7 @@ func genCostAns(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	return costAns
 }
 
-func costReqWatch() {
+func costReqListener() {
 	var costReq datatypes.CostRequest
 	var costAns datatypes.CostAnswer
 	for {

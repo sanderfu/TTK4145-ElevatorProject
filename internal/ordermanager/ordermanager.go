@@ -51,13 +51,13 @@ func OrderManager(resuming bool, lastPID string) {
 		fmt.Println("Resume successful")
 	}
 
-	go costReqWatch()
+	go costReqListener()
 	go orderRegHW()
 	go orderRegSW()
 	go queueModifier()
-	go orderCompleteWatch()
-	go backupWatch()
-	go orderRegisteredWatch()
+	go orderCompleteListener()
+	go backupListener()
+	go orderRegisteredListener()
 }
 
 func orderRegHW() {
@@ -159,7 +159,7 @@ func orderRegSW() {
 	}
 }
 
-func orderCompleteWatch() {
+func orderCompleteListener() {
 	for {
 		select {
 		case orderComplete := <-channels.OrderCompleteTOM:
@@ -177,7 +177,7 @@ func orderCompleteWatch() {
 	}
 }
 
-func orderRegisteredWatch() {
+func orderRegisteredListener() {
 	for {
 		orderReg := <-channels.OrderRegisteredTOM
 

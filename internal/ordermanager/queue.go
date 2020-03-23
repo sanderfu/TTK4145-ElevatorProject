@@ -80,7 +80,7 @@ func OrderToTakeAtFloor(floor int, ordertype int) bool {
 	return false
 }
 
-func backupWatch() {
+func backupListener() {
 	for {
 		for _, elem := range backupQueue {
 			if time.Since(elem.RegistrationTime) > backupWaitS*time.Second {
