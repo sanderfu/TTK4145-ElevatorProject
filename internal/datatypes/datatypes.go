@@ -2,19 +2,14 @@ package datatypes
 
 import "time"
 
-// Datatypes goes here
-//TODO: Fix everything to be CamelCase
+////////////////////////////////////////////////////////////////////////////////
+// Definitions
+////////////////////////////////////////////////////////////////////////////////
 
-//Basic types
-type StructType int
-type State int
-
-// Change these to match with values from elevator_io (just for simplicity)
-// Martin thinks this works. TODO: Fix this comment
 const (
-	UP     int = 0
-	DOWN   int = 1
-	INSIDE int = 2
+	OrderUp   	int = 0
+	OrderDown 	int = 1
+	OrderInside int = 2
 )
 
 const (
@@ -29,9 +24,19 @@ const (
 	DoorOpenState State = 2
 )
 
-//Struct types
-// Note that all members we want to transmit must be public. Any private members
-//  will be received as zero-values over the network.
+const (
+	Network   NWMMode = 0
+	Localhost NWMMode = 1
+)
+
+////////////////////////////////////////////////////////////////////////////////
+// Data types
+////////////////////////////////////////////////////////////////////////////////
+
+type State int
+type NWMMode int
+
+// Cost structures
 
 type CostRequest struct {
 	Signature     string //Used by networkmanager to remove duplicates
@@ -47,6 +52,8 @@ type CostAnswer struct {
 	DestinationID string //ID of answer receiver
 	CostValue     int
 }
+
+// Order structures
 
 type Order struct {
 	Signature string
@@ -77,38 +84,9 @@ type OrderRegistered struct {
 	OrderType int
 }
 
-type LightCommand struct {
-	Signature string
-	Floor     int
-	OrderType int
-}
-
-type NWMMode int
-
-const (
-	Network   NWMMode = 0
-	Localhost NWMMode = 1
-)
-
 type QueueOrder struct {
 	SourceID         string
 	Floor            int
 	OrderType        int
 	RegistrationTime time.Time
 }
-
-// Configuration struct
-type Configuration struct {
-	NumberOfFloors int
-
-	NetworkPacketDuplicates          int
-	MaxUniqueSignatures              int
-	UniqueSignatureRemovalPercentage int
-
-	CostRequestTimeoutMS     int
-	OrderReceiveAckTimeoutMS int
-	MaxCostValue             int
-	BackupTakeoverTimeoutS   int
-}
-
-var Config Configuration

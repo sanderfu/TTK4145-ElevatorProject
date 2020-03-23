@@ -43,7 +43,7 @@ func FSM() {
 func fsmInit() {
 
 	// Wait for hardware manager to finish its setup
-	hmInitStatus := <-channels.HMInitStatusTFSM
+	hmInitStatus := <-channels.HMInitStatusFHM
 
 	if !hmInitStatus {
 		fmt.Println("Hardware Manager failed to initialize")
@@ -52,7 +52,7 @@ func fsmInit() {
 
 	// Go down until elevator arrives at known floor
 	hwmanager.SetElevatorDirection(datatypes.MotorDown)
-	lastFloor = <-channels.CurrentFloorTFSM
+	lastFloor = <-channels.CurrentFloorFHM
 	hwmanager.SetElevatorDirection(datatypes.MotorStop)
 	currentDir = datatypes.MotorStop
 
@@ -123,11 +123,11 @@ func moving() {
 
 func motorDirToOrderDir(dir int) int {
 	if dir == datatypes.MotorUp {
-		return datatypes.UP
+		return datatypes.OrderUp
 	} else if dir == datatypes.MotorDown {
-		return datatypes.DOWN
+		return datatypes.OrderDown
 	} else {
-		return datatypes.INSIDE
+		return datatypes.OrderInside
 	}
 }
 
@@ -141,7 +141,7 @@ func doorOpen() {
 
 func updateLastFloor() {
 	for {
-		floor := <-channels.CurrentFloorTFSM
+		floor := <-channels.CurrentFloorFHM
 		if floor != lastFloor {
 			lastFloor = floor
 			newFloorFlag = true

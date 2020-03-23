@@ -9,6 +9,7 @@ import (
 	"github.com/TTK4145/Network-go/network/bcast"
 	"github.com/TTK4145/Network-go/network/localip"
 	. "github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
@@ -34,9 +35,9 @@ var initReceiver = make(chan struct{}, 1)
 //NetworkManager to start networkmanager routine.
 func NetworkManager() {
 	//Update global variables based on configuration
-	packetDuplicates = datatypes.Config.NetworkPacketDuplicates
-	maxUniqueSignatures = datatypes.Config.MaxUniqueSignatures
-	removePercent = datatypes.Config.UniqueSignatureRemovalPercentage
+	packetDuplicates = configuration.Config.NetworkPacketDuplicates
+	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
+	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
 
 	//Start timer used for signatures
 	start = time.Now()
@@ -181,39 +182,39 @@ func receiver(port int) {
 		case order := <-SWOrderRX:
 			if !checkDuplicate(order.Signature) {
 				if order.PrimaryID == ip && order.BackupID == ip {
-					SWOrderTOMPrimary <- order
-					SWOrderTOMBackup <- order
+					SWOrderFNMPrimary <- order
+					SWOrderFNMBackup <- order
 				} else if order.PrimaryID == ip {
-					SWOrderTOMPrimary <- order
+					SWOrderFNMPrimary <- order
 				} else if order.BackupID == ip {
-					SWOrderTOMBackup <- order
+					SWOrderFNMBackup <- order
 				}
 			}
 		case costReq := <-CostRequestRX:
 			if !checkDuplicate(costReq.Signature) {
-				CostRequestTOM <- costReq
+				CostRequestFNM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
 			if costAns.DestinationID != ip {
 				continue
 			}
 			if !checkDuplicate(costAns.Signature) {
-				CostAnswerTOM <- costAns
+				CostAnswerFNM <- costAns
 			}
 		case orderRecvAck := <-OrderRecvAckRX:
 			if orderRecvAck.DestinationID != ip {
 				continue
 			}
 			if !checkDuplicate(orderRecvAck.Signature) {
-				OrderRecvAckTOM <- orderRecvAck
+				OrderRecvAckFNM <- orderRecvAck
 			}
 		case orderComplete := <-OrderCompleteRX:
 			if !checkDuplicate(orderComplete.Signature) {
-				OrderCompleteTOM <- orderComplete
+				OrderCompleteFNM <- orderComplete
 			}
 		case orderRegistered := <-OrderRegisteredRX:
 			if !checkDuplicate(orderRegistered.Signature) {
-				OrderRegisteredTOM <- orderRegistered
+				OrderRegisteredFNM <- orderRegistered
 			}
 		case <-killReceiver:
 			KillDriverRX <- struct{}{}

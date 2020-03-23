@@ -3,6 +3,7 @@ package hwmanager
 import (
 	"github.com/TTK4145/driver-go/elevio"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
@@ -18,7 +19,7 @@ func HardwareManager(port string) {
 
 func setup(port string) {
 	addr := ":" + port
-	numberOfFloors = datatypes.Config.NumberOfFloors
+	numberOfFloors = configuration.Config.NumberOfFloors
 	elevio.Init(addr, numberOfFloors)
 
 	for floor := 0; floor < numberOfFloors; floor++ {
@@ -26,7 +27,7 @@ func setup(port string) {
 	}
 	SetDoorOpenLamp(false)
 
-	channels.HMInitStatusTFSM <- true
+	channels.HMInitStatusFHM <- true
 }
 
 func pollCurrentFloor() {
@@ -37,7 +38,7 @@ func pollCurrentFloor() {
 	for {
 		floor := <-floorSensorChan
 		elevio.SetFloorIndicator(floor)
-		channels.CurrentFloorTFSM <- floor
+		channels.CurrentFloorFHM <- floor
 	}
 }
 
@@ -62,9 +63,9 @@ func setLight(element datatypes.OrderRegistered, value bool) {
 }
 
 func setAllLightsAtFloor(floor int, value bool) {
-	for btn := datatypes.UP; btn <= datatypes.INSIDE; btn++ {
-		if !(int(floor) == 0 && btn == datatypes.DOWN) &&
-			!(int(floor) == numberOfFloors-1 && btn == datatypes.UP) {
+	for btn := datatypes.OrderUp; btn <= datatypes.OrderInside; btn++ {
+		if !(int(floor) == 0 && btn == datatypes.OrderDown) &&
+			!(int(floor) == numberOfFloors-1 && btn == datatypes.OrderUp) {
 			elevio.SetButtonLamp(elevio.ButtonType(btn), int(floor), value)
 		}
 	}
@@ -82,9 +83,9 @@ func SetDoorOpenLamp(value bool) {
 func lightWatch() {
 	for {
 		select {
-		case orderComplete := <-channels.OrderCompleteTHM:
+		case orderComplete := <-channels.ClearLightsFOM:
 			setAllLightsAtFloor(orderComplete.Floor, false)
-		case orderRegistered := <-channels.OrderRegisteredTHM:
+		case orderRegistered := <-channels.SetLightsFOM:
 			setLight(orderRegistered, true)
 		}
 	}
