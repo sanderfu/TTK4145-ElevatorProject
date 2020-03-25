@@ -102,22 +102,18 @@ func checkDuplicate(signature string) bool {
 			return true
 		}
 	}
-	recentSignatures = append(recentSignatures, signature)
 	if len(recentSignatures) > maxUniqueSignatures {
 		cleanArray()
 	}
+	recentSignatures = append(recentSignatures, signature)
 	return false
 }
 
-// TODO: Check if we can remove this for loop and just slice the front, or just
-// slice it cleaner
+// Remove a percentage (removePercent) from the front of recentSignatures
 func cleanArray() {
-	numOfElementsToDelete := int(maxUniqueSignatures * removePercent / 100)
+	firstIndex := int(maxUniqueSignatures * removePercent / 100)
 
-	for i := 0; i < len(recentSignatures)-numOfElementsToDelete; i++ {
-		recentSignatures[i] = recentSignatures[i+numOfElementsToDelete]
-	}
-	recentSignatures = recentSignatures[:len(recentSignatures)-numOfElementsToDelete]
+	recentSignatures = recentSignatures[firstIndex:]
 }
 
 func printRecentSignatures() {
@@ -192,6 +188,7 @@ func receiver(port int) {
 			}
 		case costReq := <-CostRequestRX:
 			if !checkDuplicate(costReq.Signature) {
+				costReq.DestinationID = ip
 				CostRequestFNM <- costReq
 			}
 		case costAns := <-CostAnswerRX:
