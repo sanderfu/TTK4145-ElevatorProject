@@ -12,6 +12,7 @@ type Configuration struct {
 	NumberOfFloors   int
 	DoorOpenDuration int
 
+	BroadcastPort					 int
 	NetworkPacketDuplicates          int
 	MaxUniqueSignatures              int
 	UniqueSignatureRemovalPercentage int

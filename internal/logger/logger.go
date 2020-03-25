@@ -43,7 +43,7 @@ func assetExists(assetsDir string, directory string, name string) bool {
 }
 
 //selectFileNames takes in an array and selects (writeFile,deleteFile/readFile)
-func selectFileNames(data interface{}, primary bool, assetsDir string, directory string) (string, string) {
+func selectFileNames(primary bool, assetsDir string, directory string) (string, string) {
 	switch primary {
 	case true:
 		if assetExists(assetsDir, directory, primaryv1) {
@@ -72,7 +72,7 @@ func WriteLog(data interface{}, primary bool, directory string) {
 			fmt.Println(err)
 		}
 	}
-	writefile, deletefile := selectFileNames(data, primary, assetsDir, directory)
+	writefile, deletefile := selectFileNames(primary, assetsDir, directory)
 	err = ioutil.WriteFile(filepath.Join(AssetsDir(), directory)+writefile, result, 0644)
 	if err != nil {
 		fmt.Println(err)
@@ -85,7 +85,7 @@ func WriteLog(data interface{}, primary bool, directory string) {
 
 func ReadLogQueue(data *[]datatypes.QueueOrder, primary bool, directory string) {
 	rootAssetsDir := RootAssetsDir()
-	_, readFile := selectFileNames(*data, primary, rootAssetsDir, directory)
+	_, readFile := selectFileNames(primary, rootAssetsDir, directory)
 	file, err := ioutil.ReadFile(filepath.Join(rootAssetsDir, directory) + readFile)
 	if err != nil {
 		fmt.Println("Error: ", err)

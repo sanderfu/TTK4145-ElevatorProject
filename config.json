@@ -2,6 +2,7 @@
     "NumberOfFloors": 4,
     "DoorOpenDuration": 3,
 
+    "BroadcastPort": 16569,
     "NetworkPacketDuplicates": 10,
     "MaxUniqueSignatures": 25,
     "UniqueSignatureRemovalPercentage": 20,

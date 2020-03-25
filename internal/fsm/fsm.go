@@ -167,5 +167,4 @@ func costValueListener() {
 		channels.FloorFFSM <- lastFloor
 		channels.DirectionFFSM <- motorDirToOrderType(currentDir)
 	}
-
 }

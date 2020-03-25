@@ -9,6 +9,10 @@ import (
 
 var numberOfFloors int
 
+////////////////////////////////////////////////////////////////////////////////
+// Public functions
+////////////////////////////////////////////////////////////////////////////////
+
 func HardwareManager(port string) {
 	hwInit(port)
 
@@ -25,6 +29,10 @@ func SetDoorOpenLamp(value bool) {
 	elevio.SetDoorOpenLamp(value)
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////
+
 func hwInit(port string) {
 	addr := ":" + port
 	numberOfFloors = configuration.Config.NumberOfFloors
@@ -39,7 +47,6 @@ func hwInit(port string) {
 }
 
 func pollCurrentFloor() {
-
 	floorSensorChan := make(chan int)
 	go elevio.PollFloorSensor(floorSensorChan)
 
@@ -51,7 +58,6 @@ func pollCurrentFloor() {
 }
 
 func pollHWORder() {
-
 	btnChan := make(chan elevio.ButtonEvent)
 	go elevio.PollButtons(btnChan)
 

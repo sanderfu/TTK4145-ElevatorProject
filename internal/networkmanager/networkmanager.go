@@ -1,40 +1,30 @@
 package networkmanager
 
 import (
-	"fmt"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/TTK4145/Network-go/network/bcast"
 	"github.com/TTK4145/Network-go/network/localip"
-	. "github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+var broadCastPort int
 var packetDuplicates int
 var maxUniqueSignatures int
 var removePercent int
-
 var recentSignatures []string
-
-var ip string
-
+var localID string // IP address and process ID
 var start time.Time
-
 var mode datatypes.NWMMode
-
-//For some reason needs 1 in these struct{} channels to make it work
-var killTransmitter = make(chan struct{}, 1)
-var killReceiver = make(chan struct{}, 1)
-
-var initTransmitter = make(chan struct{}, 1)
-var initReceiver = make(chan struct{}, 1)
 
 //NetworkManager to start networkmanager routine.
 func NetworkManager() {
 	//Update global variables based on configuration
+	broadCastPort = configuration.Config.BroadcastPort
 	packetDuplicates = configuration.Config.NetworkPacketDuplicates
 	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
 	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
@@ -42,180 +32,170 @@ func NetworkManager() {
 	//Start timer used for signatures
 	start = time.Now()
 
-	//Start networkWatch to detect connection loss (and switch to localhost)
-	go networkWatch()
+	//Start connectionWatchdog to detect connection loss (and switch to localhost)
+	go connectionWatchdog()
 
 	//Initialize everything that need initializing
 	recentSignatures = make([]string, 0)
-	initTransmitter <- struct{}{}
-	initReceiver <- struct{}{}
-	InitDriverTX <- struct{}{}
-	InitDriverRX <- struct{}{}
+	channels.InitTransmitter <- struct{}{}
+	channels.InitReceiver <- struct{}{}
+	channels.InitDriverTX <- struct{}{}
+	channels.InitDriverRX <- struct{}{}
 	mode = datatypes.Network
-	ip, _ = localip.LocalIP()
-	ip += ":" + strconv.Itoa(os.Getpid())
+	localID, _ = localip.LocalIP()
+	localID += ":" + strconv.Itoa(os.Getpid())
 
 	for {
 		select {
-		case <-initTransmitter:
-			go transmitter(16569)
-		case <-initReceiver:
-			go receiver(16569)
+		case <-channels.InitTransmitter:
+			go transmitter(broadCastPort)
+		case <-channels.InitReceiver:
+			go receiver(broadCastPort)
 		}
 	}
 }
 
-func networkWatch() {
+func connectionWatchdog() {
 	for {
 		time.Sleep(1000 * time.Millisecond)
-		theIP, err := localip.LocalIP()
+		IPAddr, err := localip.LocalIP()
 		if err != nil {
 			if mode != datatypes.Localhost {
-				ip = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
+				localID = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
-				killTransmitter <- struct{}{}
-				killReceiver <- struct{}{}
+				channels.KillTransmitter <- struct{}{}
+				channels.KillReceiver <- struct{}{}
 			}
 		} else {
 			if mode != datatypes.Network {
-				ip = theIP + ":" + strconv.Itoa(os.Getpid())
+				localID = IPAddr + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
-				killTransmitter <- struct{}{}
-				killReceiver <- struct{}{}
+				channels.KillTransmitter <- struct{}{}
+				channels.KillReceiver <- struct{}{}
 			}
 		}
 	}
 }
 
-func createSignature(structType int) string {
+func createUniqueSignature() string {
 	//Delay the signing process by 1ms to guarantee unique signatures
 	time.Sleep(1 * time.Millisecond)
-	timeSinceStart := time.Since(start)
-	t := strconv.FormatInt(timeSinceStart.Nanoseconds()/1e6, 10)
-	senderIPStr := ip
-	return senderIPStr + "@" + t + ":" + strconv.Itoa(structType)
+	timeStamp := strconv.FormatInt(time.Since(start).Nanoseconds()/1e6, 10)
+	return localID + "@" + timeStamp
 }
 
-func checkDuplicate(signature string) bool {
+// Return true on success, false if signature already exists in recentSignatures
+func addSignature(signature string) bool {
 	for i := 0; i < len(recentSignatures); i++ {
 		if recentSignatures[i] == signature {
-			return true
+			return false
 		}
 	}
 	if len(recentSignatures) > maxUniqueSignatures {
-		cleanArray()
+		// Remove a percentage (removePercent) from the from of recentSignatures
+		firstIndex := int(maxUniqueSignatures * removePercent / 100)
+		recentSignatures = recentSignatures[firstIndex:]
 	}
 	recentSignatures = append(recentSignatures, signature)
-	return false
-}
-
-// Remove a percentage (removePercent) from the front of recentSignatures
-func cleanArray() {
-	firstIndex := int(maxUniqueSignatures * removePercent / 100)
-
-	recentSignatures = recentSignatures[firstIndex:]
-}
-
-func printRecentSignatures() {
-	fmt.Println("")
-	fmt.Println("Recentsignatures:")
-	for j := 0; j < len(recentSignatures); j++ {
-		fmt.Println(recentSignatures[j])
-	}
+	return true
 }
 
 //transmitter Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
-	go bcast.Transmitter(port, mode, SWOrderTX, CostRequestTX, CostAnswerTX, OrderRecvAckTX, OrderCompleteTX, OrderRegisteredTX)
+	go bcast.Transmitter(port, mode, channels.SWOrderTX, channels.CostRequestTX,
+		channels.CostAnswerTX, channels.OrderRecvAckTX, channels.OrderCompleteTX,
+		channels.OrderRegisteredTX)
 	for {
 		select {
-		case order := <-SWOrderFOM:
-			order.Signature = createSignature(0)
-			order.SourceID = ip
+		case order := <-channels.SWOrderFOM:
+			order.Signature = createUniqueSignature()
+			order.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
-				SWOrderTX <- order
+				channels.SWOrderTX <- order
 			}
-		case costReq := <-CostRequestFOM:
-			costReq.Signature = createSignature(1)
-			costReq.SourceID = ip
+		case costReq := <-channels.CostRequestFOM:
+			costReq.Signature = createUniqueSignature()
+			costReq.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
-				CostRequestTX <- costReq
+				channels.CostRequestTX <- costReq
 			}
-		case costAns := <-CostAnswerFOM:
-			costAns.Signature = createSignature(2)
-			costAns.SourceID = ip
+		case costAns := <-channels.CostAnswerFOM:
+			costAns.Signature = createUniqueSignature()
+			costAns.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
-				CostAnswerTX <- costAns
+				channels.CostAnswerTX <- costAns
 			}
-		case orderRecvAck := <-OrderRecvAckFOM:
-			orderRecvAck.Signature = createSignature(3)
-			orderRecvAck.SourceID = ip
+		case orderRecvAck := <-channels.OrderRecvAckFOM:
+			orderRecvAck.Signature = createUniqueSignature()
+			orderRecvAck.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
-				OrderRecvAckTX <- orderRecvAck
+				channels.OrderRecvAckTX <- orderRecvAck
 			}
-		case orderComplete := <-OrderCompleteFOM:
-			orderComplete.Signature = createSignature(4)
+		case orderComplete := <-channels.OrderCompleteFOM:
+			orderComplete.Signature = createUniqueSignature()
 			for i := 0; i < packetDuplicates; i++ {
-				OrderCompleteTX <- orderComplete
+				channels.OrderCompleteTX <- orderComplete
 			}
-		case orderRegistered := <-OrderRegisteredFOM:
-			orderRegistered.Signature = createSignature(5)
+		case orderRegistered := <-channels.OrderRegisteredFOM:
+			orderRegistered.Signature = createUniqueSignature()
 			for i := 0; i < packetDuplicates; i++ {
-				OrderRegisteredTX <- orderRegistered
+				channels.OrderRegisteredTX <- orderRegistered
 			}
-		case <-killTransmitter:
-			KillDriverTX <- struct{}{}
-			initTransmitter <- struct{}{}
+		case <-channels.KillTransmitter:
+			channels.KillDriverTX <- struct{}{}
+			channels.InitTransmitter <- struct{}{}
 			return
 		}
 	}
 }
 
 func receiver(port int) {
-	go bcast.Receiver(port, SWOrderRX, CostRequestRX, CostAnswerRX, OrderRecvAckRX, OrderCompleteRX, OrderRegisteredRX)
+	go bcast.Receiver(port, channels.SWOrderRX, channels.CostRequestRX,
+		channels.CostAnswerRX, channels.OrderRecvAckRX,
+		channels.OrderCompleteRX, channels.OrderRegisteredRX)
 	for {
 		select {
-		case order := <-SWOrderRX:
-			if !checkDuplicate(order.Signature) {
-				if order.PrimaryID == ip && order.BackupID == ip {
-					SWOrderFNMPrimary <- order
-					SWOrderFNMBackup <- order
-				} else if order.PrimaryID == ip {
-					SWOrderFNMPrimary <- order
-				} else if order.BackupID == ip {
-					SWOrderFNMBackup <- order
+		case order := <-channels.SWOrderRX:
+			if addSignature(order.Signature) {
+				if order.PrimaryID == localID && order.BackupID == localID {
+					channels.SWOrderFNMPrimary <- order
+					channels.SWOrderFNMBackup <- order
+				} else if order.PrimaryID == localID {
+					channels.SWOrderFNMPrimary <- order
+				} else if order.BackupID == localID {
+					channels.SWOrderFNMBackup <- order
 				}
 			}
-		case costReq := <-CostRequestRX:
-			if !checkDuplicate(costReq.Signature) {
-				costReq.DestinationID = ip
-				CostRequestFNM <- costReq
+		case costReq := <-channels.CostRequestRX:
+			if addSignature(costReq.Signature) {
+				costReq.DestinationID = localID
+				channels.CostRequestFNM <- costReq
 			}
-		case costAns := <-CostAnswerRX:
-			if costAns.DestinationID != ip {
+		case costAns := <-channels.CostAnswerRX:
+			if costAns.DestinationID != localID {
 				continue
 			}
-			if !checkDuplicate(costAns.Signature) {
-				CostAnswerFNM <- costAns
+			if addSignature(costAns.Signature) {
+				channels.CostAnswerFNM <- costAns
 			}
-		case orderRecvAck := <-OrderRecvAckRX:
-			if orderRecvAck.DestinationID != ip {
+		case orderRecvAck := <-channels.OrderRecvAckRX:
+			if orderRecvAck.DestinationID != localID {
 				continue
 			}
-			if !checkDuplicate(orderRecvAck.Signature) {
-				OrderRecvAckFNM <- orderRecvAck
+			if addSignature(orderRecvAck.Signature) {
+				channels.OrderRecvAckFNM <- orderRecvAck
 			}
-		case orderComplete := <-OrderCompleteRX:
-			if !checkDuplicate(orderComplete.Signature) {
-				OrderCompleteFNM <- orderComplete
+		case orderComplete := <-channels.OrderCompleteRX:
+			if addSignature(orderComplete.Signature) {
+				channels.OrderCompleteFNM <- orderComplete
 			}
-		case orderRegistered := <-OrderRegisteredRX:
-			if !checkDuplicate(orderRegistered.Signature) {
-				OrderRegisteredFNM <- orderRegistered
+		case orderRegistered := <-channels.OrderRegisteredRX:
+			if addSignature(orderRegistered.Signature) {
+				channels.OrderRegisteredFNM <- orderRegistered
 			}
-		case <-killReceiver:
-			KillDriverRX <- struct{}{}
-			initReceiver <- struct{}{}
+		case <-channels.KillReceiver:
+			channels.KillDriverRX <- struct{}{}
+			channels.InitReceiver <- struct{}{}
 			return
 		}
 	}
