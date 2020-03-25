@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
-
-	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 )
 
 var costRequestTimeoutMS time.Duration
@@ -30,6 +29,18 @@ func OrderManager(lastPID string) {
 	start = time.Now()
 
 	//If is resuming (after crash), load queues into memory
+	readLog(lastPID)
+
+	go costRequestListener()
+	go orderRegistrationHW()
+	go orderRegistrationSW()
+	go queueModifier()
+	go orderCompleteListener()
+	go backupListener()
+	go orderRegisteredListener()
+}
+
+func readLog(lastPID string) {
 	if lastPID != "NONE" {
 		fmt.Println("Importing queue from crashed session")
 		dir := "/" + lastPID + "/" + "logs"
@@ -45,14 +56,6 @@ func OrderManager(lastPID string) {
 		logger.WriteLog(backupQueue, false, "/logs/")
 		fmt.Println("Resume successful")
 	}
-
-	go costRequestListener()
-	go orderRegistrationHW()
-	go orderRegistrationSW()
-	go queueModifier()
-	go orderCompleteListener()
-	go backupListener()
-	go orderRegisteredListener()
 }
 
 func orderRegistrationHW() {
@@ -60,9 +63,10 @@ func orderRegistrationHW() {
 		order := <-channels.OrderFHM
 
 		//Make cost request
-		var request datatypes.CostRequest
-		request.OrderType = order.OrderType
-		request.Floor = order.Floor
+		var request = datatypes.CostRequest{
+			OrderType: order.OrderType,
+			Floor:     order.Floor,
+		}
 
 		//Broadcast cost request
 		channels.CostRequestFOM <- request
@@ -125,19 +129,21 @@ func orderRegistrationHW() {
 }
 
 func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
-	var orderRecvAck datatypes.OrderRecvAck
-	orderRecvAck.OrderType = queueOrder.OrderType
-	orderRecvAck.Floor = queueOrder.Floor
-	orderRecvAck.DestinationID = queueOrder.SourceID
+	var orderRecvAck = datatypes.OrderRecvAck{
+		OrderType:     queueOrder.OrderType,
+		Floor:         queueOrder.Floor,
+		DestinationID: queueOrder.SourceID,
+	}
 	channels.OrderRecvAckFOM <- orderRecvAck
 }
 
 func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {
-	var queueOrder datatypes.QueueOrder
-	queueOrder.SourceID = order.SourceID
-	queueOrder.OrderType = order.OrderType
-	queueOrder.Floor = order.Floor
-	queueOrder.RegistrationTime = time.Now()
+	var queueOrder = datatypes.QueueOrder{
+		SourceID:         order.SourceID,
+		OrderType:        order.OrderType,
+		Floor:            order.Floor,
+		RegistrationTime: time.Now(),
+	}
 	return queueOrder
 }
 
@@ -158,14 +164,13 @@ func orderCompleteListener() {
 	for {
 		select {
 		case orderComplete := <-channels.OrderCompleteFNM:
-			var queueOrder datatypes.QueueOrder
-			queueOrder.OrderType = orderComplete.OrderType
-			fmt.Println("Forwarding remove request to queueModifier")
-			queueOrder.Floor = orderComplete.Floor
+			var queueOrder = datatypes.QueueOrder{
+				OrderType: orderComplete.OrderType,
+				Floor:     orderComplete.Floor,
+			}
 			channels.PrimaryQueueRemove <- queueOrder
 			channels.BackupQueueRemove <- queueOrder
 			channels.ClearLightsFOM <- orderComplete
-			fmt.Println("The remove request has been handeled")
 		case orderComplete := <-channels.OrderCompleteFFSM:
 			channels.OrderCompleteFOM <- orderComplete
 		}

@@ -9,7 +9,8 @@ import (
 
 // Configuration struct
 type Configuration struct {
-	NumberOfFloors int
+	NumberOfFloors   int
+	DoorOpenDuration int
 
 	NetworkPacketDuplicates          int
 	MaxUniqueSignatures              int

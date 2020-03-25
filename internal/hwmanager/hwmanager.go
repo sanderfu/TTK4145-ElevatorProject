@@ -10,14 +10,22 @@ import (
 var numberOfFloors int
 
 func HardwareManager(port string) {
-	setup(port)
+	hwInit(port)
 
 	go pollCurrentFloor()
 	go pollHWORder()
-	go lightWatch()
+	go updateOrderLights()
 }
 
-func setup(port string) {
+func SetElevatorDirection(dir int) {
+	elevio.SetMotorDirection(elevio.MotorDirection(dir))
+}
+
+func SetDoorOpenLamp(value bool) {
+	elevio.SetDoorOpenLamp(value)
+}
+
+func hwInit(port string) {
 	addr := ":" + port
 	numberOfFloors = configuration.Config.NumberOfFloors
 	elevio.Init(addr, numberOfFloors)
@@ -57,36 +65,23 @@ func pollHWORder() {
 	}
 }
 
-func setLight(element datatypes.OrderRegistered, value bool) {
-	elevio.SetButtonLamp(elevio.ButtonType(element.OrderType), int(element.Floor),
-		value)
-}
-
-func setAllLightsAtFloor(floor int, value bool) {
-	for btn := datatypes.OrderUp; btn <= datatypes.OrderInside; btn++ {
-		if !(int(floor) == 0 && btn == datatypes.OrderDown) &&
-			!(int(floor) == numberOfFloors-1 && btn == datatypes.OrderUp) {
-			elevio.SetButtonLamp(elevio.ButtonType(btn), int(floor), value)
-		}
-	}
-
-}
-
-func SetElevatorDirection(dir int) {
-	elevio.SetMotorDirection(elevio.MotorDirection(dir))
-}
-
-func SetDoorOpenLamp(value bool) {
-	elevio.SetDoorOpenLamp(value)
-}
-
-func lightWatch() {
+func updateOrderLights() {
 	for {
 		select {
 		case orderComplete := <-channels.ClearLightsFOM:
 			setAllLightsAtFloor(orderComplete.Floor, false)
 		case orderRegistered := <-channels.SetLightsFOM:
-			setLight(orderRegistered, true)
+			elevio.SetButtonLamp(elevio.ButtonType(orderRegistered.OrderType),
+				orderRegistered.Floor, true)
+		}
+	}
+}
+
+func setAllLightsAtFloor(floor int, value bool) {
+	for btn := datatypes.OrderUp; btn <= datatypes.OrderInside; btn++ {
+		if !(floor == 0 && btn == datatypes.OrderDown) &&
+			!(floor == numberOfFloors-1 && btn == datatypes.OrderUp) {
+			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, value)
 		}
 	}
 }

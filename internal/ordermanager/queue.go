@@ -64,11 +64,7 @@ func GetFirstOrderInQueue() datatypes.QueueOrder {
 }
 
 func QueueEmpty() bool {
-	if len(primaryQueue) == 0 {
-		return true
-	} else {
-		return false
-	}
+	return len(primaryQueue) == 0
 }
 
 func OrderToTakeAtFloor(floor int, ordertype int) bool {
