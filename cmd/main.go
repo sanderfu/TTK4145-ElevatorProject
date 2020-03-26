@@ -11,6 +11,7 @@ import (
 
 func main() {
 
+	// initialize system parameters
 	configuration.ParseFlags()
 	configuration.ReadConfig("./config.json")
 
@@ -25,7 +26,7 @@ func main() {
 
 	go fsm.FSM()
 
-	//Go to sleep
+	// block program for exiting
 	select {}
 
 }
