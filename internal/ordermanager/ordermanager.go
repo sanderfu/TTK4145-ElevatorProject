@@ -43,17 +43,17 @@ func OrderManager(lastPID string) {
 func readLog(lastPID string) {
 	if lastPID != "NONE" {
 		fmt.Println("Importing queue from crashed session")
-		dir := "/" + lastPID + "/" + "logs"
-		logger.ReadLogQueue(&primaryQueue, true, dir)
-		logger.ReadLogQueue(&backupQueue, false, dir)
+		dir := "/" + lastPID
+		logger.LoadQueue(&primaryQueue, true, dir)
+		logger.LoadQueue(&backupQueue, false, dir)
 		var orderReg datatypes.OrderRegistered
-		logger.WriteLog(primaryQueue, true, "/logs/")
+		logger.SaveQueue(primaryQueue, true)
 		for i := 0; i < len(primaryQueue); i++ {
 			orderReg.Floor = primaryQueue[i].Floor
 			orderReg.OrderType = primaryQueue[i].OrderType
 			channels.OrderRegisteredFOM <- orderReg
 		}
-		logger.WriteLog(backupQueue, false, "/logs/")
+		logger.SaveQueue(backupQueue, false)
 		fmt.Println("Resume successful")
 	}
 }

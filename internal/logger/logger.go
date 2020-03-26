@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
-	"runtime"
 	"strconv"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
@@ -19,76 +17,66 @@ const (
 
 	backupv1 = "/backupv1.json"
 	backupv2 = "/backupv2.json"
+
+	assetDir = "./assets/"
+
+	permissionRW = 0755
 )
 
-func RootAssetsDir() string {
-	_, b, _, _ := runtime.Caller(0)
-	internalDir := path.Join(path.Dir(b))
-	projectDir := path.Join(path.Dir(internalDir))
-	return filepath.Join(filepath.Dir(projectDir), "/assets/")
-}
-
-func AssetsDir() string {
-	return filepath.Join(RootAssetsDir(), strconv.Itoa(os.Getpid()))
-}
-
-func assetExists(assetsDir string, directory string, name string) bool {
-	path := filepath.Join(assetsDir, directory+name)
+func fileExists(dir string, filename string) bool {
+	path := filepath.Join(dir, filename)
+	fmt.Println("fileExist path: ", path)
 	_, err := os.Stat(path)
-	if err != nil {
-		return false
-	}
-	return true
 
+	return err == nil
 }
 
-//selectFileNames takes in an array and selects (writeFile,deleteFile/readFile)
-func selectFileNames(primary bool, assetsDir string, directory string) (string, string) {
-	switch primary {
-	case true:
-		if assetExists(assetsDir, directory, primaryv1) {
+func selectFileNames(primary bool) (string, string) {
+	processAssetsDir := filepath.Join(assetDir, strconv.Itoa(os.Getpid()))
+
+	if primary {
+		if fileExists(processAssetsDir, primaryv1) {
 			return primaryv2, primaryv1
+		} else {
+			return primaryv1, primaryv2
 		}
-		return primaryv1, primaryv2
-	case false:
-		if assetExists(assetsDir, directory, backupv1) {
+	} else {
+		if fileExists(processAssetsDir, backupv1) {
 			return backupv2, backupv1
+		} else {
+			return backupv1, backupv2
 		}
-		return backupv1, backupv2
-	default:
-		return "DefaultWrite.json", "DefaultDelete.json"
 	}
 }
 
-func WriteLog(data interface{}, primary bool, directory string) {
-	assetsDir := AssetsDir()
-	result, err := json.MarshalIndent(data, "", "")
+func SaveQueue(queue []datatypes.QueueOrder, primary bool) {
+	processAssetsDir := filepath.Join(assetDir, strconv.Itoa(os.Getpid()))
+	result, err := json.MarshalIndent(queue, "", "")
 	if err != nil {
 		fmt.Println(err)
 	}
-	if _, err := os.Stat(filepath.Join(assetsDir, directory)); os.IsNotExist(err) {
-		err := os.MkdirAll(filepath.Join(assetsDir, directory), 0755)
+	if _, err := os.Stat(processAssetsDir); os.IsNotExist(err) {
+		err := os.MkdirAll(processAssetsDir, permissionRW)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
-	writefile, deletefile := selectFileNames(primary, assetsDir, directory)
-	err = ioutil.WriteFile(filepath.Join(AssetsDir(), directory)+writefile, result, 0644)
+	writefile, deletefile := selectFileNames(primary)
+	err = ioutil.WriteFile(processAssetsDir+writefile, result, permissionRW)
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = os.Remove(filepath.Join(AssetsDir(), directory) + deletefile)
+	err = os.Remove(processAssetsDir + deletefile)
 	if err != nil {
 		//fmt.Println(err)
 	}
 }
 
-func ReadLogQueue(data *[]datatypes.QueueOrder, primary bool, directory string) {
-	rootAssetsDir := RootAssetsDir()
-	_, readFile := selectFileNames(primary, rootAssetsDir, directory)
-	file, err := ioutil.ReadFile(filepath.Join(rootAssetsDir, directory) + readFile)
+func LoadQueue(queue *[]datatypes.QueueOrder, primary bool, pid string) {
+	_, readFile := selectFileNames(primary)
+	file, err := ioutil.ReadFile(filepath.Join(assetDir, pid) + readFile)
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
-	_ = json.Unmarshal([]byte(file), data)
+	_ = json.Unmarshal([]byte(file), queue)
 }

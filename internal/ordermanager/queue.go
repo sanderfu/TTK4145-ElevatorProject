@@ -39,22 +39,22 @@ func queueModifier() {
 			primary := true
 			if !orderInQueue(&primaryQueue, primaryOrder) {
 				primaryQueue = append(primaryQueue, primaryOrder)
-				logger.WriteLog(primaryQueue, primary, "/logs/")
+				logger.SaveQueue(primaryQueue, primary)
 				generateOrderRecvAck(primaryOrder)
 			}
 		case primaryOrder := <-channels.PrimaryQueueRemove:
 			primary := true
 			removeFromQueue(&primaryQueue, primaryOrder)
-			logger.WriteLog(primaryQueue, primary, "/logs/")
+			logger.SaveQueue(primaryQueue, primary)
 		case backupOrder := <-channels.BackupQueueAppend:
 			primary := false
 			backupQueue = append(backupQueue, backupOrder)
-			logger.WriteLog(backupQueue, primary, "/logs/")
+			logger.SaveQueue(backupQueue, primary)
 			generateOrderRecvAck(backupOrder)
 		case backupOrder := <-channels.BackupQueueRemove:
 			primary := false
 			removeFromQueue(&backupQueue, backupOrder)
-			logger.WriteLog(backupQueue, primary, "/logs/")
+			logger.SaveQueue(backupQueue, primary)
 		}
 	}
 }
