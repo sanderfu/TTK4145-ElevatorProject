@@ -161,6 +161,7 @@ func updateLastFloor() {
 	}
 }
 
+//TODO: New function name
 func costValueListener() {
 	for {
 		<-channels.FloorAndDirectionRequestFOM

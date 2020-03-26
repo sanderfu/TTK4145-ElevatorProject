@@ -1,13 +1,11 @@
 package ordermanager
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
-	"github.com/sanderfu/TTK4145-ElevatorProject/internal/logger"
 )
 
 var costRequestTimeoutMS time.Duration
@@ -29,33 +27,15 @@ func OrderManager(lastPID string) {
 	start = time.Now()
 
 	//If is resuming (after crash), load queues into memory
-	readLog(lastPID)
+	restoreQueues(lastPID)
 
 	go costRequestListener()
 	go orderRegistrationHW()
 	go orderRegistrationSW()
 	go queueModifier()
 	go orderCompleteListener()
-	go backupListener()
+	go backupTimeoutListener()
 	go orderRegisteredListener()
-}
-
-func readLog(lastPID string) {
-	if lastPID != "NONE" {
-		fmt.Println("Importing queue from crashed session")
-		dir := "/" + lastPID
-		logger.LoadQueue(&primaryQueue, true, dir)
-		logger.LoadQueue(&backupQueue, false, dir)
-		var orderReg datatypes.OrderRegistered
-		logger.SaveQueue(primaryQueue, true)
-		for i := 0; i < len(primaryQueue); i++ {
-			orderReg.Floor = primaryQueue[i].Floor
-			orderReg.OrderType = primaryQueue[i].OrderType
-			channels.OrderRegisteredFOM <- orderReg
-		}
-		logger.SaveQueue(backupQueue, false)
-		fmt.Println("Resume successful")
-	}
 }
 
 func orderRegistrationHW() {
@@ -84,7 +64,6 @@ func orderRegistrationHW() {
 				if costAns.CostValue < primaryCost {
 					backupCost = primaryCost
 					primaryCost = costAns.CostValue
-					order.BackupID = order.PrimaryID
 					order.PrimaryID = costAns.SourceID
 				} else if costAns.CostValue < backupCost {
 					backupCost = costAns.CostValue

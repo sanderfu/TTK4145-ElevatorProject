@@ -18,8 +18,13 @@ og hvordan systemet er satt opp (at det er mesh network)
 * Alle "packagene" må ha egen "read me" file
 
 ## 4 Coherence
-* queue.go - bør vi ha funksjonene OrderToTakeAtFloor(...) og backupListener i en annen fil, hvis de skal bli bør de endre navn?
+* queue.go - bør vi ha funksjonene OrderToTakeAtFloor(...) og backupTimeoutListener() i en annen fil, hvis de skal bli bør de endre navn?
 * Noen andre bør også dobbeltsjekke dette :))
 
 ## 5 Completeness
-* 
+* Noen andre bør også dobbelt sjekke om vi mangler noen funksjonalitet i modulene
+
+## 6 State 
+* Ser bra ut - Tobias
+
+## 7 Functions
