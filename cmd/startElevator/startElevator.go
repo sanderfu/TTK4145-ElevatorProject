@@ -5,37 +5,12 @@ import (
 	"net"
 	"os/exec"
 	"strconv"
-	"time"
 )
 
 const (
 	connHost = ":"
 	connType = "tcp"
 )
-
-func testing() {
-	connPort := 16698
-	addr := connHost
-	addr += strconv.Itoa(connPort)
-	fmt.Println(addr)
-	l, err := net.Listen("tcp", addr)
-
-	for err != nil {
-		fmt.Printf("Port %v already in use, increments..\n", connPort)
-		connPort++
-		addr = connHost
-		addr += strconv.Itoa(connPort)
-		fmt.Println(addr)
-		l, err = net.Listen("tcp", addr)
-
-	}
-	fmt.Printf("Found open port: %v\n", connPort)
-	for {
-		time.Sleep(100 * time.Second)
-	}
-	defer l.Close()
-
-}
 
 func findOpenPort() (int, net.Listener) {
 	connPort := 16698
