@@ -12,6 +12,7 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+//Global variables for the package, these are initialized by the configuration
 var broadCastPort int
 var packetDuplicates int
 var maxUniqueSignatures int
@@ -21,29 +22,28 @@ var localID string // IP address and process ID
 var start time.Time
 var mode datatypes.NWMMode
 
-//NetworkManager to start networkmanager routine.
 func NetworkManager() {
-	//Update global variables based on configuration
 	broadCastPort = configuration.Config.BroadcastPort
 	packetDuplicates = configuration.Config.NetworkPacketDuplicates
 	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
 	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
 
+	mode = datatypes.Network
+	localID, _ = localip.LocalIP()
+	localID += ":" + strconv.Itoa(os.Getpid())
+	recentSignatures = make([]string, 0)
+
 	//Start timer used for signatures
 	start = time.Now()
 
-	//Start connectionWatchdog to detect connection loss (and switch to localhost)
+	//Start connectionWatchdog to detect change in network (online/offline)
 	go connectionWatchdog()
 
-	//Initialize everything that need initializing
-	recentSignatures = make([]string, 0)
+	//Send initialize messages on all relevant control-signal channels.
 	channels.InitTransmitter <- struct{}{}
 	channels.InitReceiver <- struct{}{}
 	channels.InitDriverTX <- struct{}{}
 	channels.InitDriverRX <- struct{}{}
-	mode = datatypes.Network
-	localID, _ = localip.LocalIP()
-	localID += ":" + strconv.Itoa(os.Getpid())
 
 	for {
 		select {
@@ -60,6 +60,7 @@ func connectionWatchdog() {
 		time.Sleep(1000 * time.Millisecond)
 		IPAddr, err := localip.LocalIP()
 		if err != nil {
+			//Not connected to internet, take action if has not taken action already
 			if mode != datatypes.Localhost {
 				localID = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
@@ -67,6 +68,7 @@ func connectionWatchdog() {
 				channels.KillReceiver <- struct{}{}
 			}
 		} else {
+			//Connected to internet, take action if has not taken action already
 			if mode != datatypes.Network {
 				localID = IPAddr + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
@@ -77,6 +79,7 @@ func connectionWatchdog() {
 	}
 }
 
+//Create a unique signature for the package.
 func createUniqueSignature() string {
 	//Delay the signing process by 1ms to guarantee unique signatures
 	time.Sleep(1 * time.Millisecond)
@@ -100,7 +103,7 @@ func addSignature(signature string) bool {
 	return true
 }
 
-//transmitter Function for applying packet redundancy before transmitting over network.
+//Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
 	go bcast.Transmitter(port, mode, channels.SWOrderTX, channels.CostRequestTX,
 		channels.CostAnswerTX, channels.OrderRecvAckTX, channels.OrderCompleteTX,
@@ -149,6 +152,8 @@ func transmitter(port int) {
 	}
 }
 
+//Function for removing redundant packages such that only unique packages
+//recieved are communicated onwards in the system to the Order Manager
 func receiver(port int) {
 	go bcast.Receiver(port, channels.SWOrderRX, channels.CostRequestRX,
 		channels.CostAnswerRX, channels.OrderRecvAckRX,
