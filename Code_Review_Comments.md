@@ -11,6 +11,7 @@ config fil
 * Vanskelig å se hvilke komponeneter som er koblet til hvilke moduler
 * Burde vi gjøre våre channels til å ta type `interface {}`, og så har vi bare 
 slik
+    * Nei, systemet er ikke designed for å kunne håndtere det, ville krevd en modul som bestemte men som skulle få meldingen eller lignende.
 
 ## 3 Functionality
 * oppdater "read me" filene så de er ryddig og forteller kort hva "packagene" gjør
