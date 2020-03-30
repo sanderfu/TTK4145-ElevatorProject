@@ -21,7 +21,7 @@ const (
 const (
 	IdleState     State = 0
 	MovingState   State = 1
-	DoorOpenState State = 2
+	DoorOpenState State = 2 // TODO: ble denne endret?
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 ////////////////////////////////////////////////////////////////////////////////
 
 type State int
-type NWMMode int
+type NWMMode int // Network module mode
 
 // Cost structures
 
@@ -64,7 +64,7 @@ type Order struct {
 	OrderType int
 }
 
-type OrderRecvAck struct {
+type OrderRecvAck struct { // order received acknowledgment
 	Signature     string
 	SourceID      string
 	DestinationID string

@@ -12,7 +12,7 @@ import (
 )
 
 type WatchdogMessage struct {
-	PID        int
+	PID        int // Process ID
 	UpdateTime time.Time
 }
 
@@ -27,47 +27,14 @@ const (
 	noConnectionWaitMS = 500
 )
 
-func initSenderNode(port string) net.Conn {
-	addr := connHost
-	addr += port
+// TODO: denne filen blander ms og ns (det er ikke nødvendig) skal vi holde oss til en?
 
-	conn, err := net.Dial("tcp", addr)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return conn
-}
-
-func initWatchdogNode(watchdogport string) (net.Listener, net.Conn) {
-	addr := connHost
-	addr += watchdogport
-	fmt.Println(addr)
-	l, _ := net.Listen("tcp", addr)
-
-	conn, err := l.Accept()
-	if err != nil {
-		panic(err.Error())
-	}
-	return l, conn
-}
-
-func watchdogCheckTimeout(watchdogport string, elevport string) {
-	for {
-		if time.Since(latestMessage.UpdateTime).Nanoseconds()/1e6 > timeoutMS {
-			fmt.Println(time.Since(latestMessage.UpdateTime).String())
-			fmt.Println("The SenderNode is not responding!")
-			command := "build/elevator -lastpid " + strconv.Itoa(latestMessage.PID) + " -elevport " + elevport + " -watchdogport " + watchdogport
-			fmt.Println("Restarting software: ", command)
-			cmd := exec.Command("gnome-terminal", "-e", command)
-			cmd.Run()
-		}
-		time.Sleep(updateTimeMS * time.Millisecond)
-	}
-}
+////////////////////////////////////////////////////////////////////////////////
+// Public functions
+////////////////////////////////////////////////////////////////////////////////
 
 func WatchdogNode(watchdogport string, elevport string) {
-	l, conn := initWatchdogNode(watchdogport)
+	listener, conn := initWatchdogNode(watchdogport)
 	bytebuffer := make([]byte, 500)
 
 	msg := new(WatchdogMessage)
@@ -77,13 +44,14 @@ func WatchdogNode(watchdogport string, elevport string) {
 
 	go watchdogCheckTimeout(watchdogport, elevport)
 
+	// TODO: klarer ikke helt å følge for løkken
 	for {
 		_, err := conn.Read(bytebuffer)
 
 		if err != nil {
 			conn.Close()
-			l.Close()
-			l, conn = initWatchdogNode(watchdogport)
+			listener.Close()
+			listener, conn = initWatchdogNode(watchdogport)
 		}
 
 		// Convert bytes into Buffer (implements io.Reader/io.Writer)
@@ -102,6 +70,7 @@ func WatchdogNode(watchdogport string, elevport string) {
 	}
 }
 
+// TODO: Hvor blir denne kalt?
 func SenderNode(port string) {
 	conn := initSenderNode(port)
 	defer conn.Close()
@@ -116,5 +85,49 @@ func SenderNode(port string) {
 		gobobj.Encode(msg)
 
 		conn.Write(binaryBuffer.Bytes())
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////
+
+func initSenderNode(port string) net.Conn {
+	addr := connHost
+	addr += port
+
+	conn, err := net.Dial(connType, addr)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return conn
+}
+
+func initWatchdogNode(watchdogport string) (net.Listener, net.Conn) {
+	addr := connHost
+	addr += watchdogport
+	fmt.Println(addr)  // TODO: nødvendig?
+	listener, _ := net.Listen(connType, addr)
+
+	conn, err := listener.Accept()
+	if err != nil {
+		panic(err.Error())
+	}
+	return listener, conn
+}
+
+// TODO: denne gjør vel mer enn bare å sjekke? endre navn eller lage en ekstra func?
+func watchdogCheckTimeout(watchdogport string, elevport string) {
+	for {
+		if time.Since(latestMessage.UpdateTime).Nanoseconds()/1e6 > timeoutMS {
+			fmt.Println(time.Since(latestMessage.UpdateTime).String())
+			fmt.Println("The SenderNode is not responding!")
+			command := "build/elevator -lastpid " + strconv.Itoa(latestMessage.PID) + " -elevport " + elevport + " -watchdogport " + watchdogport
+			fmt.Println("Restarting software: ", command)
+			cmd := exec.Command("gnome-terminal", "-e", command)
+			cmd.Run()
+		}
+		time.Sleep(updateTimeMS * time.Millisecond)
 	}
 }
