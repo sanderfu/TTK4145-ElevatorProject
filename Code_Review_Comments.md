@@ -3,8 +3,8 @@
 ## 1
 ### main.go
 * Ordermanager funksjonen burde ikke ta inn argumenter -> fjerner nytten av en 
-config fil
-* Samme som over med watchdog sendernode
+config fil DONE
+* Samme som over med watchdog sendernode DONE 
 * Watchdog.SenderNode burde endre navn
 
 ## 2
@@ -64,13 +64,13 @@ modul de hører til
 ## Oppdeling
 
 * cmd
-    * Elevator main (vanlig) (Martin)
+    * Elevator main (vanlig) (Martin) DONE
     * Watchdog main (Tobias)
     * startElevator main (Sander)
 
 * internal
     * Channels (felles)
-    * configuration (Martin) (inkl. config.json)
+    * configuration (Martin) (inkl. config.json) DONE
     * datatypes (Tobias)
     * FSM (Sander)
     * HWmanager (Martin)

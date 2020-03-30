@@ -16,13 +16,13 @@ func main() {
 	configuration.ReadConfig("./config.json")
 
 	// start managers
-	go watchdog.SenderNode(configuration.Flags.WatchdogPort)
+	go watchdog.SenderNode()
 
 	go networkmanager.NetworkManager()
 
-	go ordermanager.OrderManager(configuration.Flags.LastPID)
+	go ordermanager.OrderManager()
 
-	go hwmanager.HardwareManager(configuration.Flags.ElevatorPort)
+	go hwmanager.HardwareManager()
 
 	go fsm.FSM()
 

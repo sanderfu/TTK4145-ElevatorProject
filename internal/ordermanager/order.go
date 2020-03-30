@@ -16,13 +16,14 @@ var backupTakeoverTimeoutS time.Duration
 var start time.Time
 
 //OrderManager ...
-func OrderManager(lastPID string) {
+func OrderManager() {
 
 	//Set global values based on configuration
 	costRequestTimeoutMS = time.Duration(configuration.Config.CostRequestTimeoutMS)
 	orderRecvAckWaitMS = time.Duration(configuration.Config.OrderReceiveAckTimeoutMS)
 	maxCostValue = configuration.Config.MaxCostValue
 	backupTakeoverTimeoutS = time.Duration(configuration.Config.BackupTakeoverTimeoutS)
+	lastPID := configuration.Flags.LastPID
 
 	start = time.Now()
 

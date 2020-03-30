@@ -13,8 +13,8 @@ var numberOfFloors int
 // Public functions
 ////////////////////////////////////////////////////////////////////////////////
 
-func HardwareManager(port string) {
-	hwInit(port)
+func HardwareManager() {
+	hwInit(configuration.Flags.ElevatorPort)
 
 	go pollCurrentFloor()
 	go pollHWORder()
@@ -34,8 +34,9 @@ func SetDoorOpenLamp(value bool) {
 ////////////////////////////////////////////////////////////////////////////////
 
 func hwInit(port string) {
-	addr := ":" + port
 	numberOfFloors = configuration.Config.NumberOfFloors
+
+	addr := ":" + port
 	elevio.Init(addr, numberOfFloors)
 
 	for floor := 0; floor < numberOfFloors; floor++ {
@@ -43,6 +44,7 @@ func hwInit(port string) {
 	}
 	SetDoorOpenLamp(false)
 
+	// signal that HW init is finished
 	channels.HMInitStatusFHM <- true
 }
 
