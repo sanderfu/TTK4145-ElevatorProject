@@ -108,15 +108,6 @@ func orderRegistrationHW() {
 	}
 }
 
-func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
-	var orderRecvAck = datatypes.OrderRecvAck{
-		OrderType:     queueOrder.OrderType,
-		Floor:         queueOrder.Floor,
-		DestinationID: queueOrder.SourceID,
-	}
-	channels.OrderRecvAckFOM <- orderRecvAck
-}
-
 func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {
 	var queueOrder = datatypes.QueueOrder{
 		SourceID:         order.SourceID,

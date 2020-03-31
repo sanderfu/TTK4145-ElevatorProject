@@ -36,15 +36,10 @@ var backupQueue []datatypes.QueueOrder
 ////////////////////////////////////////////////////////////////////////////////
 
 // Only primary queue is accessable from outside the module
-func OrderInQueue(floor int, ordertype int) bool {
-	order := datatypes.QueueOrder{
-		Floor:     floor,
-		OrderType: ordertype,
-	}
-	return orderInPrimaryQueue(order)
+func OrderInQueue(order datatypes.QueueOrder) bool {
+	return orderInQueue(&primaryQueue, order)
 }
 
-// Could this simply return the floor and ordertype?
 func GetFirstOrderInQueue() datatypes.QueueOrder {
 	return primaryQueue[0]
 }
@@ -53,6 +48,10 @@ func QueueEmpty() bool {
 	return len(primaryQueue) == 0
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////
+
 // Listen for messages to add or remove elements from the queues, then save the
 // updated queues
 func queueModifier() {
@@ -60,28 +59,18 @@ func queueModifier() {
 		select {
 		case primaryOrder := <-channels.PrimaryQueueAppend:
 			primary := true
-			if !orderInQueue(&primaryQueue, primaryOrder) {
-				primaryQueue = append(primaryQueue, primaryOrder)
-				saveQueue(primaryQueue, primary)
-				generateOrderRecvAck(primaryOrder)
-			}
+			addOrderToQueue(&primaryQueue, primaryOrder)
+			saveQueue(primaryQueue, primary)
+			sendOrderRecvAck(primaryOrder)
 		case primaryOrder := <-channels.PrimaryQueueRemove:
 			primary := true
 			removeOrderFromQueue(&primaryQueue, primaryOrder)
 			saveQueue(primaryQueue, primary)
 		case backupOrder := <-channels.BackupQueueAppend:
-			// Endring som kreves dersom vi ikke skal legge inn i køen hvis den
-			// finnes fra før
-			// if !orderInBackupQueue(backupOrder.Floor, backupOrder.OrderType) {
-			// 	primary := false
-			// 	backupQueue = append(backupQueue, backupOrder)
-			// 	saveQueue(backupQueue, primary)
-			// 	generateOrderRecvAck(backupOrder)
-			// }
 			primary := false
-			backupQueue = append(backupQueue, backupOrder)
+			addOrderToQueue(&backupQueue, backupOrder)
 			saveQueue(backupQueue, primary)
-			generateOrderRecvAck(backupOrder)
+			sendOrderRecvAck(backupOrder)
 		case backupOrder := <-channels.BackupQueueRemove:
 			primary := false
 			removeOrderFromQueue(&backupQueue, backupOrder)
@@ -98,26 +87,6 @@ func orderInQueue(queue *[]datatypes.QueueOrder, order datatypes.QueueOrder) boo
 	}
 	return false
 }
-
-// Proposed function
-// func orderInPrimaryQueue(order datatypes.QueueOrder) bool {
-// 	for _, orderFromQueue := range primaryQueue {
-// 		if ordersAreEqual(order, orderFromQueue) {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
-
-// // Proposed function.
-// func orderInBackupQueue(order datatypes.QueueOrder) bool {
-// 	for _, orderFromQueue := range backupQueue {
-// 		if ordersAreEqual(order, orderFromQueue) {
-// 			return true
-// 		}
-// 	}
-// 	return false
-// }
 
 func ordersAreEqual(order1 datatypes.QueueOrder, order2 datatypes.QueueOrder) bool {
 	return order1.Floor == order2.Floor && order1.OrderType == order2.OrderType
@@ -153,8 +122,17 @@ func backupTimeoutListener() {
 	}
 }
 
+func sendOrderRecvAck(queueOrder datatypes.QueueOrder) {
+	var orderRecvAck = datatypes.OrderRecvAck{
+		OrderType:     queueOrder.OrderType,
+		Floor:         queueOrder.Floor,
+		DestinationID: queueOrder.SourceID,
+	}
+	channels.OrderRecvAckFOM <- orderRecvAck
+}
+
 ////////////////////////////////////////////////////////////////////////////////
-// Functions for queue backup
+// Functions for saving/loading queue
 ////////////////////////////////////////////////////////////////////////////////
 
 func restoreQueues(lastPID string) {
@@ -166,7 +144,7 @@ func restoreQueues(lastPID string) {
 		var orderReg datatypes.OrderRegistered
 		saveQueue(primaryQueue, true)
 
-		// Set order lights
+		// Refresh order lights
 		for i := 0; i < len(primaryQueue); i++ {
 			orderReg.Floor = primaryQueue[i].Floor
 			orderReg.OrderType = primaryQueue[i].OrderType
@@ -185,21 +163,20 @@ func saveQueue(queue []datatypes.QueueOrder, primary bool) {
 	if err != nil {
 		fmt.Println(err)
 	}
+	// If directory for storing queue does not exist, make it
 	if _, err := os.Stat(processAssetsDir); os.IsNotExist(err) {
 		err := os.MkdirAll(processAssetsDir, filePermissions)
 		if err != nil {
 			fmt.Println(err)
 		}
 	}
+	// Store queue in new file, then delete the old one
 	writefile, deletefile := selectFileNames(primary, pid)
 	err = ioutil.WriteFile(processAssetsDir+writefile, result, filePermissions)
 	if err != nil {
 		fmt.Println(err)
 	}
-	err = os.Remove(processAssetsDir + deletefile)
-	if err != nil {
-		//fmt.Println(err)
-	}
+	os.Remove(processAssetsDir + deletefile)
 }
 
 func loadQueue(queue *[]datatypes.QueueOrder, primary bool, pid string) {
@@ -208,6 +185,7 @@ func loadQueue(queue *[]datatypes.QueueOrder, primary bool, pid string) {
 	if err != nil {
 		fmt.Println("Error: ", err)
 	}
+	// Convert from JSON and load into queue
 	_ = json.Unmarshal([]byte(file), queue)
 }
 

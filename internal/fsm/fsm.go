@@ -12,16 +12,20 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/ordermanager"
 )
 
+////////////////////////////////////////////////////////////////////////////////
+// Private variables
+////////////////////////////////////////////////////////////////////////////////
 var lastFloor int
 var newFloorFlag bool
 var currentDir int
-
 var currentOrder datatypes.QueueOrder
 var currentState datatypes.State
-
 var doorOpeningTime time.Time
-
 var doorTimeout time.Duration
+
+////////////////////////////////////////////////////////////////////////////////
+// Public functions
+////////////////////////////////////////////////////////////////////////////////
 
 func FSM() {
 
@@ -40,6 +44,10 @@ func FSM() {
 		time.Sleep(100 * time.Millisecond)
 	}
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// State functions
+////////////////////////////////////////////////////////////////////////////////
 
 func fsmInit() {
 
@@ -64,17 +72,12 @@ func fsmInit() {
 	currentState = datatypes.IdleState
 }
 
-////////////////////////////////////////////////////////////////////////////////
-// State functions
-////////////////////////////////////////////////////////////////////////////////
-
 func idle() {
 
 	// Check for new orders
 	if ordermanager.QueueEmpty() {
 		return
 	}
-
 	currentOrder = ordermanager.GetFirstOrderInQueue()
 
 	// Calculate direction to move in
@@ -88,7 +91,6 @@ func idle() {
 
 	// Start moving
 	hwmanager.SetElevatorDirection(currentDir)
-
 	currentState = datatypes.MovingState
 }
 
@@ -112,8 +114,15 @@ func moving() {
 
 		// Check if elevator arrived at a new floor and there is an order there
 	} else if newFloorFlag == true {
-		if ordermanager.OrderInQueue(lastFloor, motorDirToOrderType(currentDir)) ||
-			ordermanager.OrderInQueue(lastFloor, datatypes.OrderInside) {
+		orderWithCurrentDir := datatypes.QueueOrder{
+			Floor:     lastFloor,
+			OrderType: motorDirToOrderType(currentDir),
+		}
+		insideOrder := datatypes.QueueOrder{
+			Floor:     lastFloor,
+			OrderType: datatypes.OrderInside,
+		}
+		if ordermanager.OrderInQueue(orderWithCurrentDir) || ordermanager.OrderInQueue(insideOrder) {
 			hwmanager.SetElevatorDirection(datatypes.MotorStop)
 			currentDir = datatypes.MotorStop
 			doorOpeningTime = time.Now()
