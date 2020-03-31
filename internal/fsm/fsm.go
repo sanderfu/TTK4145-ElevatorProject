@@ -112,7 +112,8 @@ func moving() {
 
 		// Check if elevator arrived at a new floor and there is an order there
 	} else if newFloorFlag == true {
-		if ordermanager.OrderToTakeAtFloor(lastFloor, motorDirToOrderType(currentDir)) {
+		if ordermanager.OrderInQueue(lastFloor, motorDirToOrderType(currentDir)) ||
+			ordermanager.OrderInQueue(lastFloor, datatypes.OrderInside) {
 			hwmanager.SetElevatorDirection(datatypes.MotorStop)
 			currentDir = datatypes.MotorStop
 			doorOpeningTime = time.Now()

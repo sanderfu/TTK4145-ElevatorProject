@@ -73,7 +73,7 @@ modul de hører til
     * configuration (Martin) (inkl. config.json) DONE
     * datatypes (Tobias)
     * FSM (Sander)
-    * HWmanager (Martin)
+    * HWmanager (Martin) DONE
     * Networkmanager (Sander)
     * Ordermanager
         * Order (Sander)
