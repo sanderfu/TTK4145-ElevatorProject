@@ -49,7 +49,7 @@ func hwInit(port string) {
 	SetDoorOpenLamp(false)
 
 	// signal that HW init is finished
-	channels.HMInitStatusFHM <- true
+	channels.HMInitStatusFhmTfsm <- true
 }
 
 func pollCurrentFloor() {
@@ -59,7 +59,7 @@ func pollCurrentFloor() {
 	for {
 		floor := <-floorSensorChan
 		elevio.SetFloorIndicator(floor)
-		channels.CurrentFloorFHM <- floor
+		channels.CurrentFloorFhmTfsm <- floor
 	}
 }
 
@@ -73,16 +73,16 @@ func pollHWORder() {
 			Floor:     btnValue.Floor,
 			OrderType: int(btnValue.Button),
 		}
-		channels.OrderFHM <- hwOrder
+		channels.OrderFhmTom <- hwOrder
 	}
 }
 
 func updateOrderLights() {
 	for {
 		select {
-		case orderComplete := <-channels.ClearLightsFOM:
+		case orderComplete := <-channels.ClearLightsFomThm:
 			setAllLightsAtFloor(orderComplete.Floor, false)
-		case orderRegistered := <-channels.SetLightsFOM:
+		case orderRegistered := <-channels.SetLightsFomThm:
 			elevio.SetButtonLamp(elevio.ButtonType(orderRegistered.OrderType),
 				orderRegistered.Floor, true)
 		}

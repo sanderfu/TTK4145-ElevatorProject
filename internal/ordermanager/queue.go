@@ -128,7 +128,7 @@ func sendOrderRecvAck(queueOrder datatypes.QueueOrder) {
 		Floor:         queueOrder.Floor,
 		DestinationID: queueOrder.SourceID,
 	}
-	channels.OrderRecvAckFOM <- orderRecvAck
+	channels.OrderRecvAckFomTnm <- orderRecvAck
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -148,7 +148,7 @@ func restoreQueues(lastPID string) {
 		for i := 0; i < len(primaryQueue); i++ {
 			orderReg.Floor = primaryQueue[i].Floor
 			orderReg.OrderType = primaryQueue[i].OrderType
-			channels.OrderRegisteredFOM <- orderReg
+			channels.OrderRegisteredFomTnm <- orderReg
 		}
 		saveQueue(backupQueue, false)
 		fmt.Println("Resume successful")

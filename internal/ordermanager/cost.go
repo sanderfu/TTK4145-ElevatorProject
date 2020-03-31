@@ -21,9 +21,9 @@ func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	costAns.DestinationID = costReq.SourceID
 
 	// requesting last floor and direction from FSM
-	channels.FloorAndDirectionRequestFOM <- struct{}{}
-	var lastFloor int = <-channels.FloorFFSM
-	var currentDirection int = <-channels.DirectionFFSM
+	channels.FloorAndDirectionRequestFomTfsm <- struct{}{}
+	var lastFloor int = <-channels.FloorFfsmTom
+	var currentDirection int = <-channels.DirectionFfsmTom
 
 	if lastFloor > costReq.Floor {
 		newDirection = 0
@@ -50,7 +50,7 @@ func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 func costRequestListener() {
 	var costReq datatypes.CostRequest
 	for {
-		costReq = <-channels.CostRequestFNM
-		channels.CostAnswerFOM <- genCostAnswer(costReq)
+		costReq = <-channels.CostRequestFnmTom
+		channels.CostAnswerFomTnm <- genCostAnswer(costReq)
 	}
 }

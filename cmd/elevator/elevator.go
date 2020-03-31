@@ -1,6 +1,9 @@
 package main
 
 import (
+
+	"fmt"
+
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/fsm"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/hwmanager"
@@ -10,6 +13,8 @@ import (
 )
 
 func main() {
+
+	fmt.Println("Starting elevator")
 
 	// initialize system parameters
 	configuration.ParseFlags()

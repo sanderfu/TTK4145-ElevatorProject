@@ -1,7 +1,7 @@
 GO_CMD = go
 GO_BUILD = $(GO_CMD) build
 
-ELEVATOR_FILE_NAME = main.go
+ELEVATOR_FILE_NAME = elevator.go
 WATCHDOG_FILE_NAME = watchdog.go
 START_ELEVATOR_FILE_NAME = startElevator.go
 

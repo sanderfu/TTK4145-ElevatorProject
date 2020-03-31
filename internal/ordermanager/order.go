@@ -8,12 +8,19 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+////////////////////////////////////////////////////////////////////////////////
+// Private variables
+////////////////////////////////////////////////////////////////////////////////
+
 var costRequestTimeoutMS time.Duration
 var orderRecvAckWaitMS time.Duration
 var maxCostValue int
 var backupTakeoverTimeoutS time.Duration
-
 var start time.Time
+
+////////////////////////////////////////////////////////////////////////////////
+// Public functions
+////////////////////////////////////////////////////////////////////////////////
 
 //OrderManager ...
 func OrderManager() {
@@ -37,21 +44,22 @@ func OrderManager() {
 	go orderCompleteListener()
 	go backupTimeoutListener()
 	go orderRegisteredListener()
+
+	////////////////////////////////////////////////////////////////////////////////
+	// Private functions
+	////////////////////////////////////////////////////////////////////////////////
 }
 
 func orderRegistrationHW() {
 	for {
-		order := <-channels.OrderFHM
-
+		order := <-channels.OrderFhmTom
 		//Make cost request
 		var request = datatypes.CostRequest{
 			OrderType: order.OrderType,
 			Floor:     order.Floor,
 		}
-
 		//Broadcast cost request
-		channels.CostRequestFOM <- request
-
+		channels.CostRequestFomTnm <- request
 		//Wait for answers
 		done := time.After(costRequestTimeoutMS * time.Millisecond)
 		primaryCost := maxCostValue + 1
@@ -61,7 +69,8 @@ func orderRegistrationHW() {
 			select {
 			case <-done:
 				break costWaitloop
-			case costAns := <-channels.CostAnswerFNM:
+			case costAns := <-channels.CostAnswerFnmTom:
+				// Assign primary and backup elevator
 				if costAns.CostValue < primaryCost {
 					backupCost = primaryCost
 					primaryCost = costAns.CostValue
@@ -76,7 +85,7 @@ func orderRegistrationHW() {
 		if backupCost == maxCostValue+1 {
 			order.BackupID = order.PrimaryID
 		}
-		channels.SWOrderFOM <- order
+		channels.SWOrderFomTnm <- order
 		//Wait for OrderRecAck from primary and backup
 		done2 := time.After(orderRecvAckWaitMS * time.Millisecond)
 		ackCounter := 0
@@ -85,9 +94,9 @@ func orderRegistrationHW() {
 			select {
 			case <-done2:
 				//Timer reached end, the order transmit is assumed to have failed and order is put back into the channel
-				channels.OrderFHM <- order
+				channels.OrderFhmTom <- order
 				break ackWaitloop
-			case orderRecvAck := <-channels.OrderRecvAckFNM:
+			case orderRecvAck := <-channels.OrderRecvAckFnmTom:
 				if orderRecvAck.SourceID == order.PrimaryID || orderRecvAck.SourceID == order.BackupID {
 					//Check that ack matches order, if not throw it away as it has probably arrived to late for prev. order
 					if orderRecvAck.Floor == order.Floor && orderRecvAck.OrderType == order.OrderType {
@@ -100,7 +109,7 @@ func orderRegistrationHW() {
 						Floor:     order.Floor,
 						OrderType: order.OrderType,
 					}
-					channels.OrderRegisteredFOM <- orderReg
+					channels.OrderRegisteredFomTnm <- orderReg
 					break ackWaitloop
 				}
 			}
@@ -121,10 +130,10 @@ func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {
 func orderRegistrationSW() {
 	for {
 		select {
-		case order := <-channels.SWOrderFNMPrimary:
+		case order := <-channels.SWOrderPrimaryFnmTom:
 			queueOrder := generateQueueOrder(order)
 			channels.PrimaryQueueAppend <- queueOrder
-		case order := <-channels.SWOrderFNMBackup:
+		case order := <-channels.SWOrderBackupFnmTom:
 			queueOrder := generateQueueOrder(order)
 			channels.BackupQueueAppend <- queueOrder
 		}
@@ -134,24 +143,23 @@ func orderRegistrationSW() {
 func orderCompleteListener() {
 	for {
 		select {
-		case orderComplete := <-channels.OrderCompleteFNM:
+		case orderComplete := <-channels.OrderCompleteFnmTom:
 			var queueOrder = datatypes.QueueOrder{
 				OrderType: orderComplete.OrderType,
 				Floor:     orderComplete.Floor,
 			}
 			channels.PrimaryQueueRemove <- queueOrder
 			channels.BackupQueueRemove <- queueOrder
-			channels.ClearLightsFOM <- orderComplete
-		case orderComplete := <-channels.OrderCompleteFFSM:
-			channels.OrderCompleteFOM <- orderComplete
+			channels.ClearLightsFomThm <- orderComplete
+		case orderComplete := <-channels.OrderCompleteFfsmTom:
+			channels.OrderCompleteFomTnm <- orderComplete
 		}
 	}
 }
 
 func orderRegisteredListener() {
 	for {
-		orderReg := <-channels.OrderRegisteredFNM
-
-		channels.SetLightsFOM <- orderReg
+		orderReg := <-channels.OrderRegisteredFnmTom
+		channels.SetLightsFomThm <- orderReg
 	}
 }
