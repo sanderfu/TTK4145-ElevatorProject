@@ -3,9 +3,9 @@
 ## 1
 ### main.go
 * Ordermanager funksjonen burde ikke ta inn argumenter -> fjerner nytten av en 
-config fil DONE
-* Samme som over med watchdog sendernode DONE 
-* Watchdog.SenderNode burde endre navn
+config fil
+* Samme som over med watchdog ElevatorNode
+* Watchdog.ElevatorNode burde endre navn
 
 ## 2
 * Vanskelig å se hvilke komponeneter som er koblet til hvilke moduler

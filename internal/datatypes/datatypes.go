@@ -7,8 +7,8 @@ import "time"
 ////////////////////////////////////////////////////////////////////////////////
 
 const (
-	OrderUp   	int = 0
-	OrderDown 	int = 1
+	OrderUp     int = 0
+	OrderDown   int = 1
 	OrderInside int = 2
 )
 
@@ -34,7 +34,7 @@ const (
 ////////////////////////////////////////////////////////////////////////////////
 
 type State int
-type NWMMode int
+type NWMMode int // Network module mode
 
 // Cost structures
 
@@ -64,7 +64,7 @@ type Order struct {
 	OrderType int
 }
 
-type OrderRecvAck struct {
+type OrderRecvAck struct { // order received acknowledgment
 	Signature     string
 	SourceID      string
 	DestinationID string
