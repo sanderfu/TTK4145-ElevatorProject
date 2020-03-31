@@ -12,42 +12,36 @@ import (
 )
 
 type WatchdogMessage struct {
-	PID        int // Process ID
-	UpdateTime time.Time
+	PID       int
+	Timestamp time.Time
 }
 
 var latestMessage WatchdogMessage
 
 const (
-	connHost = ":"
-	connType = "tcp"
-
-	updateTimeMS       = 500
-	timeoutMS          = 750
-	noConnectionWaitMS = 500
+	updateTimeMS = 500
+	timeoutMS    = 750
 )
-
-// TODO: denne filen blander ms og ns (det er ikke nødvendig) skal vi holde oss til en?
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public functions
 ////////////////////////////////////////////////////////////////////////////////
 
 func WatchdogNode(watchdogport string, elevport string) {
+	fmt.Println("Starting watchdog")
 	listener, conn := initWatchdogNode(watchdogport)
 	bytebuffer := make([]byte, 500)
-
 	msg := new(WatchdogMessage)
 	msg.PID = 0
-	msg.UpdateTime = time.Now()
+	msg.Timestamp = time.Now()
 	latestMessage = *msg
 
-	go watchdogCheckTimeout(watchdogport, elevport)
+	go watchdogTimeoutHandler(watchdogport, elevport)
 
-	// TODO: klarer ikke helt å følge for løkken
 	for {
 		_, err := conn.Read(bytebuffer)
 
+		// If read fails, ElevatorNode is gone and WatchdogNode must be reinitialized
 		if err != nil {
 			conn.Close()
 			listener.Close()
@@ -57,33 +51,26 @@ func WatchdogNode(watchdogport string, elevport string) {
 		// Convert bytes into Buffer (implements io.Reader/io.Writer)
 		buffer := bytes.NewBuffer(bytebuffer)
 
-		//Init a new WatchdogMessage struct
-
 		//Create a decoder object that takes in the Buffer
-		gobobj := gob.NewDecoder(buffer)
+		gobDecoder := gob.NewDecoder(buffer)
 
 		// Decode buffer and unmarshal it into a WatchdogMessage
-		gobobj.Decode(msg)
-
+		gobDecoder.Decode(msg)
 		latestMessage = *msg
-
 	}
 }
 
-// TODO: Hvor blir denne kalt?
-func SenderNode(port string) {
-	conn := initSenderNode(port)
+func ElevatorNode(port string) {
+	conn := initElevatorNode(port)
 	defer conn.Close()
 	msg := new(WatchdogMessage)
 	msg.PID = os.Getpid()
-
 	for {
 		time.Sleep(updateTimeMS * time.Millisecond)
-		msg.UpdateTime = time.Now()
+		msg.Timestamp = time.Now()
 		binaryBuffer := new(bytes.Buffer)
-		gobobj := gob.NewEncoder(binaryBuffer)
-		gobobj.Encode(msg)
-
+		gobEncoder := gob.NewEncoder(binaryBuffer)
+		gobEncoder.Encode(msg)
 		conn.Write(binaryBuffer.Bytes())
 	}
 }
@@ -92,24 +79,18 @@ func SenderNode(port string) {
 // Private functions
 ////////////////////////////////////////////////////////////////////////////////
 
-func initSenderNode(port string) net.Conn {
-	addr := connHost
-	addr += port
-
-	conn, err := net.Dial(connType, addr)
+func initElevatorNode(port string) net.Conn {
+	addr := ":" + port
+	conn, err := net.Dial("tcp", addr)
 	if err != nil {
 		panic(err.Error())
 	}
-
 	return conn
 }
 
 func initWatchdogNode(watchdogport string) (net.Listener, net.Conn) {
-	addr := connHost
-	addr += watchdogport
-	fmt.Println(addr)  // TODO: nødvendig?
-	listener, _ := net.Listen(connType, addr)
-
+	addr := ":" + watchdogport
+	listener, _ := net.Listen("tcp", addr)
 	conn, err := listener.Accept()
 	if err != nil {
 		panic(err.Error())
@@ -117,12 +98,11 @@ func initWatchdogNode(watchdogport string) (net.Listener, net.Conn) {
 	return listener, conn
 }
 
-// TODO: denne gjør vel mer enn bare å sjekke? endre navn eller lage en ekstra func?
-func watchdogCheckTimeout(watchdogport string, elevport string) {
+func watchdogTimeoutHandler(watchdogport string, elevport string) {
 	for {
-		if time.Since(latestMessage.UpdateTime).Nanoseconds()/1e6 > timeoutMS {
-			fmt.Println(time.Since(latestMessage.UpdateTime).String())
-			fmt.Println("The SenderNode is not responding!")
+		if time.Since(latestMessage.Timestamp).Nanoseconds()/1e6 > timeoutMS {
+			fmt.Println(time.Since(latestMessage.Timestamp).String())
+			fmt.Println("The ElevatorNode is not responding!")
 			command := "build/elevator -lastpid " + strconv.Itoa(latestMessage.PID) + " -elevport " + elevport + " -watchdogport " + watchdogport
 			fmt.Println("Restarting software: ", command)
 			cmd := exec.Command("gnome-terminal", "-e", command)

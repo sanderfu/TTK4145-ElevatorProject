@@ -7,8 +7,8 @@ import "time"
 ////////////////////////////////////////////////////////////////////////////////
 
 const (
-	OrderUp   	int = 0
-	OrderDown 	int = 1
+	OrderUp     int = 0
+	OrderDown   int = 1
 	OrderInside int = 2
 )
 
@@ -21,7 +21,7 @@ const (
 const (
 	IdleState     State = 0
 	MovingState   State = 1
-	DoorOpenState State = 2 // TODO: ble denne endret?
+	DoorOpenState State = 2
 )
 
 const (

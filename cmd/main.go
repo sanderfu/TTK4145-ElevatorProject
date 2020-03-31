@@ -16,7 +16,7 @@ func main() {
 	configuration.ReadConfig("./config.json")
 
 	// start managers
-	go watchdog.SenderNode(configuration.Flags.WatchdogPort)
+	go watchdog.ElevatorNode(configuration.Flags.WatchdogPort)
 
 	go networkmanager.NetworkManager()
 
