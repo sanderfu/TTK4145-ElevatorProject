@@ -16,13 +16,14 @@ var backupTakeoverTimeoutS time.Duration
 var start time.Time
 
 //OrderManager ...
-func OrderManager(lastPID string) {
+func OrderManager() {
 
 	//Set global values based on configuration
 	costRequestTimeoutMS = time.Duration(configuration.Config.CostRequestTimeoutMS)
 	orderRecvAckWaitMS = time.Duration(configuration.Config.OrderReceiveAckTimeoutMS)
 	maxCostValue = configuration.Config.MaxCostValue
 	backupTakeoverTimeoutS = time.Duration(configuration.Config.BackupTakeoverTimeoutS)
+	lastPID := configuration.Flags.LastPID
 
 	start = time.Now()
 
@@ -105,15 +106,6 @@ func orderRegistrationHW() {
 			}
 		}
 	}
-}
-
-func generateOrderRecvAck(queueOrder datatypes.QueueOrder) {
-	var orderRecvAck = datatypes.OrderRecvAck{
-		OrderType:     queueOrder.OrderType,
-		Floor:         queueOrder.Floor,
-		DestinationID: queueOrder.SourceID,
-	}
-	channels.OrderRecvAckFOM <- orderRecvAck
 }
 
 func generateQueueOrder(order datatypes.Order) datatypes.QueueOrder {

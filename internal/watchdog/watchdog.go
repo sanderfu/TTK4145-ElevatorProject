@@ -9,6 +9,8 @@ import (
 	"os/exec"
 	"strconv"
 	"time"
+
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 )
 
 type WatchdogMessage struct {
@@ -102,8 +104,8 @@ func WatchdogNode(watchdogport string, elevport string) {
 	}
 }
 
-func SenderNode(port string) {
-	conn := initSenderNode(port)
+func SenderNode() {
+	conn := initSenderNode(configuration.Flags.WatchdogPort)
 	defer conn.Close()
 	msg := new(WatchdogMessage)
 	msg.PID = os.Getpid()
