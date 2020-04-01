@@ -69,7 +69,7 @@ This project consists of the following modules in the `internal` folder, further
 documented in their own READMEs
 
 * **Network manager:** handles broadcasting packages over UDP including packet 
-loss. ([README](./internal/networkmanager/README.MD))
+loss. ([README](./internal/networkmanager/README.md))
 * **Order manager:** handles all order related actions including order auctions
 and order queues. ([README](./internal/ordermanager/README.md))
 * **Finite state machine (FSM):** Handles the state of the elevator.
