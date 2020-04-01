@@ -10,8 +10,7 @@ This package has as its only responsibility to make sure that the elevator is al
 * **Input argument(s):** 
 * * `watchdogport string` The tcp port for communication between watchdog and elevator 
 * * `elevport string` The tcp port for communication between elevator and elevator hardware interface application.
-* **Output argument(s):**
-* * No output arguments
+* **Output argument(s):** None
 
 ### `ElevatorNode`
 * Runs as a subroutine in the elevator applicaion. Sends timestamped messages to `WatchdogNode` to inform that the elevator application has not crashed.

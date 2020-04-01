@@ -1,4 +1,4 @@
-# networkmanager
+# Networkmanager
 
 ## Overview
 The networkmanager package handles all communication with the network driver `Network-go`
@@ -10,19 +10,19 @@ not put unnecessary strain on the network or other modules.
 
 ## Exported functions
 
-### `NetworkManager`
-* NetworkManager is the main routine-function for network communication.
+* `NetworkManager`
+  * NetworkManager is the main routine-function for network communication.
 Initializes all package-variables and starts all subroutines needed
 for normal operation. Starts the network driver. Stays alive waiting to start 
 transmitter and reciever again if the network status changes. Please note that 
 as all managers in our software, the network manager communicates only via 
 channels accessed through the global channels package implemented in this 
 project software.
-* Input argument(s): No input arguments
-* Return value(s) : No return values
+  * **Input argument(s):** No input arguments
+  * **Return value(s):** No return values
 
 ## Implementation
-The networkmanager is the middle point between our custom local elevator softtware and our network of online elevators. It therefore implements transceiving infrastructure for all relevant datatypes, error handling and packet redundancy to ensure reliable communication between the elevators.
+The networkmanager is the middle point between our custom local elevator software and our network of online elevators. It therefore implements transceiving infrastructure for all relevant datatypes, error handling and packet redundancy to ensure reliable communication between the elevators.
 
 By only exposing the `NetworkManager` function, it allows the `ordermanager` package to transmit and recieve from ordinary golang channels defined in the `channels` package as if all elevators were connected directly through these. It thus effectively makes the complexity of transmitting with udp on a network invisible to the rest of the elevator software.
 
