@@ -118,6 +118,11 @@ func doorOpen() {
 	doorOpeningTime = time.Now()
 	hwmanager.SetDoorOpenLamp(true)
 
+	for time.Since(doorOpeningTime) < doorTimeout*time.Second {
+		// wait
+	}
+	hwmanager.SetDoorOpenLamp(false)
+
 	// Inform order manager that order was completed on given floor
 	completedOrder := datatypes.OrderComplete{
 		Floor:     currentOrder.Floor,
@@ -125,10 +130,6 @@ func doorOpen() {
 	}
 	channels.OrderCompleteFfsmTom <- completedOrder
 
-	for time.Since(doorOpeningTime) < doorTimeout*time.Second {
-		// wait
-	}
-	hwmanager.SetDoorOpenLamp(false)
 	currentState = datatypes.IdleState
 }
 
