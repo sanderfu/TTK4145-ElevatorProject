@@ -37,5 +37,5 @@ The hardware manager also polls the elevator buttons and sensors in order to
 watch for new order and relay these to the order manager and to provide the rest
 of the system with information on the current floor of the elevator. 
 
-In the oppsoite way the hardware manager listens for registered orders or 
+In the opposite way the hardware manager listens for registered orders or 
 completed order from the order manager and manages the order lights accordingly.
