@@ -7,20 +7,23 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+// Constants to tune the equation for cost generation
 const (
-	c1 = 1
-	c2 = 1
+	weightFloor    = 1
+	weightDirMatch = 1
 )
 
 func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	var costAns datatypes.CostAnswer
-	costAns.DestinationID = costReq.SourceID
 	var newDirection int
 	var directionMatch int
 
-	channels.FloorAndDirectionRequestFOM <- struct{}{}
-	var lastFloor int = <-channels.FloorFFSM
-	var currentDirection int = <-channels.DirectionFFSM
+	costAns.ArrivalID = costReq.SourceID
+
+	// requesting last floor and direction from FSM
+	channels.FloorAndDirectionRequestFomTfsm <- struct{}{}
+	var lastFloor int = <-channels.FloorFfsmTom
+	var currentDirection int = <-channels.DirectionFfsmTom
 
 	if lastFloor > costReq.Floor {
 		newDirection = 0
@@ -39,7 +42,7 @@ func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	if costReq.OrderType == datatypes.OrderInside && costReq.SourceID != costReq.DestinationID {
 		costAns.CostValue = maxCostValue + 1
 	} else {
-		costAns.CostValue = c1*int(math.Abs(float64(costReq.Floor-lastFloor))) + c2*(directionMatch)
+		costAns.CostValue = weightFloor*int(math.Abs(float64(costReq.Floor-lastFloor))) + weightDirMatch*directionMatch
 	}
 	return costAns
 }
@@ -47,7 +50,7 @@ func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 func costRequestListener() {
 	var costReq datatypes.CostRequest
 	for {
-		costReq = <-channels.CostRequestFNM
-		channels.CostAnswerFOM <- genCostAnswer(costReq)
+		costReq = <-channels.CostRequestFnmTom
+		channels.CostAnswerFomTnm <- genCostAnswer(costReq)
 	}
 }

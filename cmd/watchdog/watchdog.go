@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/watchdog"
 )
@@ -24,7 +23,6 @@ func main() {
 
 	go watchdog.WatchdogNode(*watchdogPortPtr, *elevPortPtr)
 
-	for {
-		time.Sleep(50 * time.Second)
-	}
+	//Block thread from exiting
+	select {}
 }

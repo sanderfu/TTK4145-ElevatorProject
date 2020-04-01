@@ -7,8 +7,8 @@ import "time"
 ////////////////////////////////////////////////////////////////////////////////
 
 const (
-	OrderUp   	int = 0
-	OrderDown 	int = 1
+	OrderUp     int = 0
+	OrderDown   int = 1
 	OrderInside int = 2
 )
 
@@ -34,7 +34,7 @@ const (
 ////////////////////////////////////////////////////////////////////////////////
 
 type State int
-type NWMMode int
+type NWMMode int // Network module mode
 
 // Cost structures
 
@@ -47,10 +47,10 @@ type CostRequest struct {
 }
 
 type CostAnswer struct {
-	Signature     string //Used by networkmanager to remove duplicates
-	SourceID      string //ID of answer sender.
-	DestinationID string //ID of answer receiver
-	CostValue     int
+	Signature string //Used by networkmanager to remove duplicates
+	SourceID  string //ID of answer sender.
+	ArrivalID string //ID of where the answer arrived
+	CostValue int
 }
 
 // Order structures
@@ -64,7 +64,7 @@ type Order struct {
 	OrderType int
 }
 
-type OrderRecvAck struct {
+type OrderRecvAck struct { // order received acknowledgment
 	Signature     string
 	SourceID      string
 	DestinationID string
@@ -80,6 +80,8 @@ type OrderComplete struct {
 
 type OrderRegistered struct {
 	Signature string
+	SourceID  string
+	ArrivalID string
 	Floor     int
 	OrderType int
 }

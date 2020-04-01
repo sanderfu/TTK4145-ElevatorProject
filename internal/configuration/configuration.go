@@ -7,12 +7,11 @@ import (
 	"os"
 )
 
-// Configuration struct
 type Configuration struct {
 	NumberOfFloors   int
 	DoorOpenDuration int
 
-	BroadcastPort					 int
+	BroadcastPort                    int
 	NetworkPacketDuplicates          int
 	MaxUniqueSignatures              int
 	UniqueSignatureRemovalPercentage int
@@ -29,35 +28,49 @@ type CommandLineFlags struct {
 	LastPID      string
 }
 
-// Global variable storing all data from config file
+////////////////////////////////////////////////////////////////////////////////
+// Global variables storing data from config file and command line flags
+////////////////////////////////////////////////////////////////////////////////
+
 var Config Configuration
 var Flags CommandLineFlags
 
+////////////////////////////////////////////////////////////////////////////////
+// Public functions
+////////////////////////////////////////////////////////////////////////////////
+
 func ReadConfig(filename string) {
+	// Open config file
 	file, err := os.Open(filename)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 
+	// Read config file into global variable
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(&Config)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
 func ParseFlags() {
-	// flag parsing
-	elevPortPtr := flag.String("elevport", "", "elevator server port (mandatory)")
-	watchdogPortPtr := flag.String("watchdogport", "", "watchdog port (mandatory)")
-	lastPIDPtr := flag.String("lastpid", "NONE", "process ID of last running program")
-	flag.Parse()
-
 	args := os.Args[1:]
 	if len(args) < 2 {
 		fmt.Println("Argument(s) missing. See -h")
 		os.Exit(1)
 	}
+
+	// Define flags
+	elevPortPtr := flag.String("elevport", "", "elevator server port (mandatory)")
+	watchdogPortPtr := flag.String("watchdogport", "", "watchdog port (mandatory)")
+	lastPIDPtr := flag.String("lastpid", "NONE", "process ID of last running program")
+
+	flag.Parse()
+
+	// Load flags into global variable
 	Flags.ElevatorPort = *elevPortPtr
 	Flags.WatchdogPort = *watchdogPortPtr
 	Flags.LastPID = *lastPIDPtr

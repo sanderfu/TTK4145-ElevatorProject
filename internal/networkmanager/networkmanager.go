@@ -12,6 +12,10 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+////////////////////////////////////////////////////////////////////////////////
+// Private variables
+////////////////////////////////////////////////////////////////////////////////
+
 var broadCastPort int
 var packetDuplicates int
 var maxUniqueSignatures int
@@ -21,29 +25,33 @@ var localID string // IP address and process ID
 var start time.Time
 var mode datatypes.NWMMode
 
-//NetworkManager to start networkmanager routine.
+////////////////////////////////////////////////////////////////////////////////
+// Public function
+////////////////////////////////////////////////////////////////////////////////
+
 func NetworkManager() {
-	//Update global variables based on configuration
+	// Get parameters from config
 	broadCastPort = configuration.Config.BroadcastPort
 	packetDuplicates = configuration.Config.NetworkPacketDuplicates
 	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
 	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
 
+	mode = datatypes.Network
+	localID, _ = localip.LocalIP()
+	localID += ":" + strconv.Itoa(os.Getpid())
+	recentSignatures = make([]string, 0)
+
 	//Start timer used for signatures
 	start = time.Now()
 
-	//Start connectionWatchdog to detect connection loss (and switch to localhost)
+	//Start connectionWatchdog to detect change in network (online/offline)
 	go connectionWatchdog()
 
-	//Initialize everything that need initializing
-	recentSignatures = make([]string, 0)
+	//Send initialize messages on all relevant control-signal channels.
 	channels.InitTransmitter <- struct{}{}
 	channels.InitReceiver <- struct{}{}
 	channels.InitDriverTX <- struct{}{}
 	channels.InitDriverRX <- struct{}{}
-	mode = datatypes.Network
-	localID, _ = localip.LocalIP()
-	localID += ":" + strconv.Itoa(os.Getpid())
 
 	for {
 		select {
@@ -55,11 +63,16 @@ func NetworkManager() {
 	}
 }
 
+////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////
+
 func connectionWatchdog() {
 	for {
 		time.Sleep(1000 * time.Millisecond)
 		IPAddr, err := localip.LocalIP()
 		if err != nil {
+			//Not connected to internet, take action if has not taken action already
 			if mode != datatypes.Localhost {
 				localID = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
@@ -67,6 +80,7 @@ func connectionWatchdog() {
 				channels.KillReceiver <- struct{}{}
 			}
 		} else {
+			//Connected to internet, take action if has not taken action already
 			if mode != datatypes.Network {
 				localID = IPAddr + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
@@ -77,6 +91,7 @@ func connectionWatchdog() {
 	}
 }
 
+//Create a unique signature for the package.
 func createUniqueSignature() string {
 	//Delay the signing process by 1ms to guarantee unique signatures
 	time.Sleep(1 * time.Millisecond)
@@ -100,44 +115,45 @@ func addSignature(signature string) bool {
 	return true
 }
 
-//transmitter Function for applying packet redundancy before transmitting over network.
+// Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
 	go bcast.Transmitter(port, mode, channels.SWOrderTX, channels.CostRequestTX,
 		channels.CostAnswerTX, channels.OrderRecvAckTX, channels.OrderCompleteTX,
 		channels.OrderRegisteredTX)
 	for {
 		select {
-		case order := <-channels.SWOrderFOM:
+		case order := <-channels.SWOrderFomTnm:
 			order.Signature = createUniqueSignature()
 			order.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
 				channels.SWOrderTX <- order
 			}
-		case costReq := <-channels.CostRequestFOM:
+		case costReq := <-channels.CostRequestFomTnm:
 			costReq.Signature = createUniqueSignature()
 			costReq.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
 				channels.CostRequestTX <- costReq
 			}
-		case costAns := <-channels.CostAnswerFOM:
+		case costAns := <-channels.CostAnswerFomTnm:
 			costAns.Signature = createUniqueSignature()
 			costAns.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
 				channels.CostAnswerTX <- costAns
 			}
-		case orderRecvAck := <-channels.OrderRecvAckFOM:
+		case orderRecvAck := <-channels.OrderRecvAckFomTnm:
 			orderRecvAck.Signature = createUniqueSignature()
 			orderRecvAck.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
 				channels.OrderRecvAckTX <- orderRecvAck
 			}
-		case orderComplete := <-channels.OrderCompleteFOM:
+		case orderComplete := <-channels.OrderCompleteFomTnm:
 			orderComplete.Signature = createUniqueSignature()
 			for i := 0; i < packetDuplicates; i++ {
 				channels.OrderCompleteTX <- orderComplete
 			}
-		case orderRegistered := <-channels.OrderRegisteredFOM:
+		case orderRegistered := <-channels.OrderRegisteredFomTnm:
 			orderRegistered.Signature = createUniqueSignature()
+			orderRegistered.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
 				channels.OrderRegisteredTX <- orderRegistered
 			}
@@ -149,6 +165,8 @@ func transmitter(port int) {
 	}
 }
 
+// Function for removing redundant packages such that only unique packages
+// recieved are communicated onwards in the system to the Order Manager
 func receiver(port int) {
 	go bcast.Receiver(port, channels.SWOrderRX, channels.CostRequestRX,
 		channels.CostAnswerRX, channels.OrderRecvAckRX,
@@ -158,40 +176,41 @@ func receiver(port int) {
 		case order := <-channels.SWOrderRX:
 			if addSignature(order.Signature) {
 				if order.PrimaryID == localID && order.BackupID == localID {
-					channels.SWOrderFNMPrimary <- order
-					channels.SWOrderFNMBackup <- order
+					channels.SWOrderPrimaryFnmTom <- order
+					channels.SWOrderBackupFnmTom <- order
 				} else if order.PrimaryID == localID {
-					channels.SWOrderFNMPrimary <- order
+					channels.SWOrderPrimaryFnmTom <- order
 				} else if order.BackupID == localID {
-					channels.SWOrderFNMBackup <- order
+					channels.SWOrderBackupFnmTom <- order
 				}
 			}
 		case costReq := <-channels.CostRequestRX:
 			if addSignature(costReq.Signature) {
 				costReq.DestinationID = localID
-				channels.CostRequestFNM <- costReq
+				channels.CostRequestFnmTom <- costReq
 			}
 		case costAns := <-channels.CostAnswerRX:
-			if costAns.DestinationID != localID {
+			if costAns.ArrivalID != localID {
 				continue
 			}
 			if addSignature(costAns.Signature) {
-				channels.CostAnswerFNM <- costAns
+				channels.CostAnswerFnmTom <- costAns
 			}
 		case orderRecvAck := <-channels.OrderRecvAckRX:
 			if orderRecvAck.DestinationID != localID {
 				continue
 			}
 			if addSignature(orderRecvAck.Signature) {
-				channels.OrderRecvAckFNM <- orderRecvAck
+				channels.OrderRecvAckFnmTom <- orderRecvAck
 			}
 		case orderComplete := <-channels.OrderCompleteRX:
 			if addSignature(orderComplete.Signature) {
-				channels.OrderCompleteFNM <- orderComplete
+				channels.OrderCompleteFnmTom <- orderComplete
 			}
 		case orderRegistered := <-channels.OrderRegisteredRX:
 			if addSignature(orderRegistered.Signature) {
-				channels.OrderRegisteredFNM <- orderRegistered
+				orderRegistered.ArrivalID = localID
+				channels.OrderRegisteredFnmTom <- orderRegistered
 			}
 		case <-channels.KillReceiver:
 			channels.KillDriverRX <- struct{}{}

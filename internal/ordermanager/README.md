@@ -1,71 +1,92 @@
-# Order manager
+# Order Manager
 
-### Note:
-The decision has been made to merge ordermanager and queuemanager under the ordermanager name. Docs will be updated after this module is completed.
+## Overview
+The order manager is parted in three files, which handles orders, queues and
+calculates cost for taking an order. It keeps track of both the primary and the 
+backup queue, and is the only package with accsess to the queues. This means 
+that it is interfacing between the `FSM`, the `network manager` and getting 
+order from the `hardware manager`.
 
-### TODO - HW Order Registration
- * Make function to recieve HW orders, broadcast cost request, recieve cost answers and decide primary and backup
-    * Assumptions:
-        * Networkmanager must write ID to structs requiring this - IMPLEMENTED
-    * Test reciving costAns and signing Primary and Backup ID - PASSED
-    * Test reciving costAns alone on network - PASSED
-    * Test working cost signature - PASSED AND REMOVED
-    * Test interaction between two PCs where one recieves HW order - PASSED
- * Modify prev. function to wait for confirmation from primary and backup that order is recieved.
-    * Assumptions:
-        * Networkmanager must only let SWOrders where we are primary or backup through to Order Manager - IMPLEMENTED
-    * Test interaction between three PCs where one recieves HW order and all have different cost - FAIL
-        * Wrong Primary/Secondary combination is choosen - FIXED AND PASSED
-    * Major bug was present with TOM channels filling up with no emptying. Fixed by introducing DestionationID.
- * Test that most extensive test from network manager still produces correct result
- * Implement "broadcast lightcommand"
-    * Make this feature unnecessary by using the recieved SW order instead. Idea: Send a duplicate of the SW order on a dedicated channel from networkmanager to ordermanagerfor this.
- * Reduce the waittimes to break after 250ms instead of after 1s and test functionality on 3 Terminals - PASSED
- * Repeat the same test on 3 pcs on the sanntidssal - PASSED
- * Repeat same test on 3 PCs ont he sanntidssal w. packet loss 20% - PASSED
- * CHANGE: Instead of sending order registered to hardwaremanager directly, send it to network and have a routine that recieves these and instruct hardware manager to set lights.
+## Exported functions
+* `OrderManager`
+    * Main function of order manager, which starts all subrutines associated 
+    with this package
+    * **Input argument(s):** None
+    * **Return argument(s):** None
 
-### TODO - SW Order Registration
- * Set up routine to listen for incoming SW orders
- * Redirect these WS orders to primary or backup channel for registration in queuemanager - Deligated to Network Manager
- * Create queuestructs and arrays. Keep only necessary info in these structs - DONE
- * Test logging queues - DONE 
- 
- ### TODO - Order complete watchers
- * Utilize channels and help functions to avoid race conditions when modifying queues
- * Change generateSignature in networkmanager to delay by 1 ms to guarantee unique signatures
+* `OrderInQueue`
+    * Checks if the order is in the primary queue
+    * **Input argument(s):** `order`
+    * **Return argument(s):** `bool` True if the order is in the queue, false if
+    not
 
- ### TODO - Major midway testing
- * Test sending orders and ordercompletes on one terminal on one computer - PASSED
- * Test sending orders and ordercompletes on 3 terminals on one computer - PASSED
- * Test sending order and ordercompletes on 3 PCs on the sanntidlab with 20% packet loss - PASSED
+* `GetFirstOrderInQueue`
+    * Returns the first order in the primary queue
+    * **Input argument(s):** None
+    * **Return argument(s):** `order` The first order
 
- ### TODO - Generate Cost
- * Let cost value be defined by length of primary queue, with reduction for each element in queue that matches Floor. Further advancements will be made. 
+* `QueueEmpty`
+    * Checks if the primary queue is empty
+    * **Input argument(s):** None
+    * **Return argument(s):** `bool` True if the queue is empty, false if not
 
-### TODO - Fix bug that stops elevator from acception more than approx 7 orders
- * Observations:
-    *  It seems to have something to do with backup timeouts
-    *  It gets gradually worse from 5 orders onwards
-    *  On testing, when order comes in just as a backup order is timing out, is is sent many times over and over on orderfhm channel. Ack is probably not coming fast enough du to possible block, investigating this further
-        * On further testing, this is still happening without a backup timeout happening at the same time, and this second time the order does not finish registering at all. The putton is pressed and ordermanager routine is started but it does not register in queue file and does not finsh.
-        * The round failing passes getting cost values, so problem must be later.
-        * Is not recieving acknowledgements at all, investigating further
-            * Seems like it is not reciving the order
-            * We are recieving orders, but they do not have primaryID and BackupID so they are not sent to the order manager
-            * Investigating on why they do not have these fields filled. Previous orders have them filled correctly
-            * BUG FOUND: The "MAXCOST" value was set lower than the cost the elevator generated. FIX: Increase MAXCOST to 1000.
+## Implementation
 
-### TODO - Resume when killed
- * If asked to do so, load queue into memory from correct previous Process ID (pid)
+The order manager is handling all logic for the local elevator to function. It 
+preps order request from the hardware manager for the network manager, so 
+network manager only is interfacing with order manager. The package is sliced 
+into three files, `order.go`, `queue.go` and `cost.go`, in order to increase
+readability.
 
+### order.go
+The main file for the package, which handles all new orders (and order requests)
+coming either from the network manager or the hardware manager. It is always 
+listning for new orders and cost request from the network manager and handles 
+them respectivly.
 
-### TODO
-* Get rid of `if resuming`. Make this just load the queue and if there was no file
-then just don't load anything. Make it a function `omInit` which also sets up the global variables. 
-Also delete this from main
-* Find bug in `genCostAns` and update `costReqWatch` to call this function
-* Group similar functions together and add 80 / below and above, see cost
+### queue.go
+This file is only working with the primary- and backup queue, adding/deleting 
+orders from the queues. In addition to also saving the queue in a json file and 
+loading the file if the system would crash and need to reboot.
 
+### cost.go
+When called upon in `order.go`, it generates a cost for taken a given order at 
+the place and state the elevator is in at the moment. The cost is then sent back
+to `order.go`.
 
- 
+### Order types
+
+There are two types of orders in the system which differentiate on where they 
+originate from. This is done to separate the orders coming from the physical 
+buttons with the ones that are broadcasted over UDP. The types are
+
+* **HW order:** A hardware order is an order coming from the buttons on the 
+elevator
+* **SW order:** A software order is an order broadcasted via UDP
+
+The HW orders come from the hardware manager and are relayed to the order 
+manager. This order will form the basis for the cost request generated by the
+order manager. Once the order manager has received answers from the cost
+request, it will choose the two lowest costs and broadcast the order to those 
+elevators. This broadcasted message is a SW order and once an elevator receives
+a SW order with its address on the destination address it adds it to the primary
+or backup queue, depending on what order it is. *Note that this implies that 
+only SW orders received from a broadcast message can be added to any of the two 
+order queues.*
+
+### Order flow
+
+The auction based system is therefore so that every elevator connected to the 
+network competes for every order, even the elevator that starts the auction.
+
+Once a HW order is received from the HW manager a cost request is generated and
+the elevators with the lowest cost are selected. To generalize the system, this
+is done for all orders, even inside orders. This means that if the elevator is 
+disconnected from the others, it will only receive one cost answer and this will
+be from itself. It will then choose itself to take the order. 
+
+The same idea applies to inside orders which cannot be shared with another 
+elevator. The cost of an inside order for any elevator other than the one who 
+received it on its elevator will simply be the highest cost possible and thus 
+the elevator which received it will be chosen.
+

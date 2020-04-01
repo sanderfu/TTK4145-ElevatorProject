@@ -7,14 +7,18 @@ import (
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
+////////////////////////////////////////////////////////////////////////////////
+// Private variables
+////////////////////////////////////////////////////////////////////////////////
+
 var numberOfFloors int
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public functions
 ////////////////////////////////////////////////////////////////////////////////
 
-func HardwareManager(port string) {
-	hwInit(port)
+func HardwareManager() {
+	hwInit(configuration.Flags.ElevatorPort)
 
 	go pollCurrentFloor()
 	go pollHWORder()
@@ -34,8 +38,9 @@ func SetDoorOpenLamp(value bool) {
 ////////////////////////////////////////////////////////////////////////////////
 
 func hwInit(port string) {
-	addr := ":" + port
 	numberOfFloors = configuration.Config.NumberOfFloors
+
+	addr := ":" + port
 	elevio.Init(addr, numberOfFloors)
 
 	for floor := 0; floor < numberOfFloors; floor++ {
@@ -43,7 +48,8 @@ func hwInit(port string) {
 	}
 	SetDoorOpenLamp(false)
 
-	channels.HMInitStatusFHM <- true
+	// signal that HW init is finished
+	channels.HMInitStatusFhmTfsm <- true
 }
 
 func pollCurrentFloor() {
@@ -53,7 +59,7 @@ func pollCurrentFloor() {
 	for {
 		floor := <-floorSensorChan
 		elevio.SetFloorIndicator(floor)
-		channels.CurrentFloorFHM <- floor
+		channels.CurrentFloorFhmTfsm <- floor
 	}
 }
 
@@ -67,16 +73,16 @@ func pollHWORder() {
 			Floor:     btnValue.Floor,
 			OrderType: int(btnValue.Button),
 		}
-		channels.OrderFHM <- hwOrder
+		channels.OrderFhmTom <- hwOrder
 	}
 }
 
 func updateOrderLights() {
 	for {
 		select {
-		case orderComplete := <-channels.ClearLightsFOM:
+		case orderComplete := <-channels.ClearLightsFomThm:
 			setAllLightsAtFloor(orderComplete.Floor, false)
-		case orderRegistered := <-channels.SetLightsFOM:
+		case orderRegistered := <-channels.SetLightsFomThm:
 			elevio.SetButtonLamp(elevio.ButtonType(orderRegistered.OrderType),
 				orderRegistered.Floor, true)
 		}
