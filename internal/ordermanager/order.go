@@ -160,6 +160,10 @@ func orderCompleteListener() {
 func orderRegisteredListener() {
 	for {
 		orderReg := <-channels.OrderRegisteredFnmTom
-		channels.SetLightsFomThm <- orderReg
+		if orderReg.OrderType == datatypes.OrderInside && orderReg.SourceID != orderReg.ArrivalID {
+			// Not our inside order, discards
+		} else {
+			channels.SetLightsFomThm <- orderReg
+		}
 	}
 }
