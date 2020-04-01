@@ -1,100 +1,28 @@
 package hwmanager
 
 import (
-	"fmt"
-	"time"
-
-	"github.com/TTK4145/Network-go/network/localip"
 	"github.com/TTK4145/driver-go/elevio"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
+	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
 )
 
-const (
-	numFloors = 4
-)
+////////////////////////////////////////////////////////////////////////////////
+// Private variables
+////////////////////////////////////////////////////////////////////////////////
 
-var totalFloors int
+var numberOfFloors int
+
+////////////////////////////////////////////////////////////////////////////////
+// Public functions
+////////////////////////////////////////////////////////////////////////////////
 
 func HardwareManager() {
-
-	setup(4)
+	hwInit(configuration.Flags.ElevatorPort)
 
 	go pollCurrentFloor()
 	go pollHWORder()
-	go lightWatch()
-
-}
-
-func setup(numFloors int) {
-	// TODO: Find out if this function should take addr and numFloors as args
-	addr, err := localip.LocalIP()
-
-	if err != nil {
-		fmt.Println("Error: hwmanager (setup):", err)
-	}
-
-	addr += ":15657"
-	totalFloors = numFloors
-
-	elevio.Init(addr, numFloors)
-	for floor := 0; floor < totalFloors; floor++ {
-		setAllLightsAtFloor(floor, false)
-	}
-	SetDoorOpenLamp(false)
-
-	channels.HMInitStatusTFSM <- true
-	//go fsmMock()
-	//go omMock()
-
-}
-
-func pollCurrentFloor() {
-
-	floorSensorChan := make(chan int)
-	go elevio.PollFloorSensor(floorSensorChan)
-
-	for {
-		floor := <-floorSensorChan
-
-		elevio.SetFloorIndicator(floor)
-
-		channels.CurrentFloorTFSM <- floor
-	}
-
-}
-
-func pollHWORder() {
-
-	btnChan := make(chan elevio.ButtonEvent)
-	go elevio.PollButtons(btnChan)
-
-	for {
-
-		btnValue := <-btnChan
-		fmt.Println("Button pressed")
-		hwOrder := datatypes.Order{
-			Floor: btnValue.Floor,
-			Dir:   int(btnValue.Button),
-		}
-
-		channels.OrderFHM <- hwOrder
-	}
-}
-
-func setLight(element datatypes.Order, value bool) {
-	elevio.SetButtonLamp(elevio.ButtonType(element.Dir), int(element.Floor),
-		value)
-}
-
-func setAllLightsAtFloor(floor int, value bool) {
-	for btn := datatypes.UP; btn <= datatypes.INSIDE; btn++ {
-		if !(int(floor) == 0 && btn == datatypes.DOWN) &&
-			!(int(floor) == totalFloors-1 && btn == datatypes.UP) {
-			elevio.SetButtonLamp(elevio.ButtonType(btn), int(floor), value)
-		}
-	}
-
+	go updateOrderLights()
 }
 
 func SetElevatorDirection(dir int) {
@@ -105,66 +33,67 @@ func SetDoorOpenLamp(value bool) {
 	elevio.SetDoorOpenLamp(value)
 }
 
-func lightWatch() {
+////////////////////////////////////////////////////////////////////////////////
+// Private functions
+////////////////////////////////////////////////////////////////////////////////
+
+func hwInit(port string) {
+	numberOfFloors = configuration.Config.NumberOfFloors
+
+	addr := ":" + port
+	elevio.Init(addr, numberOfFloors)
+
+	for floor := 0; floor < numberOfFloors; floor++ {
+		setAllLightsAtFloor(floor, false)
+	}
+	SetDoorOpenLamp(false)
+
+	// signal that HW init is finished
+	channels.HMInitStatusFhmTfsm <- true
+}
+
+func pollCurrentFloor() {
+	floorSensorChan := make(chan int)
+	go elevio.PollFloorSensor(floorSensorChan)
+
+	for {
+		floor := <-floorSensorChan
+		elevio.SetFloorIndicator(floor)
+		channels.CurrentFloorFhmTfsm <- floor
+	}
+}
+
+func pollHWORder() {
+	btnChan := make(chan elevio.ButtonEvent)
+	go elevio.PollButtons(btnChan)
+
+	for {
+		btnValue := <-btnChan
+		hwOrder := datatypes.Order{
+			Floor:     btnValue.Floor,
+			OrderType: int(btnValue.Button),
+		}
+		channels.OrderFhmTom <- hwOrder
+	}
+}
+
+func updateOrderLights() {
 	for {
 		select {
-		case orderComplete := <-channels.OrderCompleteTHM:
+		case orderComplete := <-channels.ClearLightsFomThm:
 			setAllLightsAtFloor(orderComplete.Floor, false)
-		case orderRegistered := <-channels.OrderRegisteredTHM:
-			setLight(orderRegistered, true)
+		case orderRegistered := <-channels.SetLightsFomThm:
+			elevio.SetButtonLamp(elevio.ButtonType(orderRegistered.OrderType),
+				orderRegistered.Floor, true)
 		}
 	}
 }
 
-// Mocks below
-
-func fsmMock() {
-	go fsmPollFloorMock()
-	go fsmsetElevatorDirectionMock()
-}
-
-func fsmPollFloorMock() {
-
-	for {
-		floor := <-channels.CurrentFloorTFSM
-		fmt.Println("Reached floor", floor)
+func setAllLightsAtFloor(floor int, value bool) {
+	for btn := datatypes.OrderUp; btn <= datatypes.OrderInside; btn++ {
+		if !(floor == 0 && btn == datatypes.OrderDown) &&
+			!(floor == numberOfFloors-1 && btn == datatypes.OrderUp) {
+			elevio.SetButtonLamp(elevio.ButtonType(btn), floor, value)
+		}
 	}
-}
-
-func fsmsetElevatorDirectionMock() {
-
-	// Simulate an arbitrary sequence to see that directions are set correctly
-	SetElevatorDirection(datatypes.MotorUp)
-	time.Sleep(time.Second * 3)
-	SetElevatorDirection(datatypes.MotorStop)
-	time.Sleep(time.Second * 3)
-	SetElevatorDirection(datatypes.MotorDown)
-	time.Sleep(time.Second * 3)
-	SetElevatorDirection(datatypes.MotorStop)
-}
-
-func omMock() {
-	go omMockGetHWOrders()
-}
-
-func omMockGetHWOrders() {
-	for {
-		hwOrder := <-channels.OrderFHM
-
-		fmt.Println("HW Order: Floor", hwOrder.Floor, "Direction:", hwOrder.Dir)
-
-		// Turn off that order again
-		go omMockLightControl(hwOrder)
-	}
-}
-
-func omMockLightControl(order datatypes.Order) {
-
-	// Set that light on
-	setLight(order, true)
-
-	time.Sleep(time.Second * 3)
-
-	setLight(order, false)
-
 }
