@@ -80,12 +80,19 @@ and order queues. ([README](./internal/ordermanager/README.md))
 ([README](./internal/watchdog/README.md))
 * **Configuration:** Handles the initialization of system parameters upon 
 startup. ([README](./internal/configuration/README.md))
+* **Datatypes:** Defines the datatypes used in the system. 
+([README](./internal/datatypes/README.md))
+* **Channels:** Contains all channels used for communication between modules.
+([README](./internal/channels/README.md))
+
 
 The handed out drivers are the following and documentation can be found on
 Github
 
 * **Network-go:** Network driver, found on Github 
-[here](https://github.com/TTK4145/Network-go)
+[here](https://github.com/TTK4145/Network-go). This is slightly modified to 
+allow for a soft restart of the network driver. The modified code is found
+[here](./vendor/github.com/TTK4145/Network-go/network/bcast/bcast.go).
 * **driver-go:** Elevator driver, found on Github 
 [here](https://github.com/TTK4145/driver-go) 
 
