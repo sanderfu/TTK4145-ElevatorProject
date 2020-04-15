@@ -18,7 +18,7 @@ func genCostAnswer(costReq datatypes.CostRequest) datatypes.CostAnswer {
 	var newDirection int
 	var directionMatch int
 
-	costAns.ArrivalID = costReq.SourceID
+	costAns.DestinationID = costReq.SourceID
 
 	// requesting last floor and direction from FSM
 	channels.FloorAndDirectionRequestFomTfsm <- struct{}{}

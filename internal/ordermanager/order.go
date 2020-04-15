@@ -45,7 +45,6 @@ func OrderManager() {
 	go backupTimeoutListener()
 	go orderRegisteredListener()
 
-	
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -146,6 +145,10 @@ func orderCompleteListener() {
 	for {
 		select {
 		case orderComplete := <-channels.OrderCompleteFnmTom:
+			if orderComplete.OrderType == datatypes.OrderInside && orderComplete.SourceID != orderComplete.ArrivalID {
+				//The order is not for this elevator, discard it
+				continue
+			}
 			var queueOrder = datatypes.QueueOrder{
 				OrderType: orderComplete.OrderType,
 				Floor:     orderComplete.Floor,

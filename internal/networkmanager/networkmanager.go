@@ -148,6 +148,7 @@ func transmitter(port int) {
 			}
 		case orderComplete := <-channels.OrderCompleteFomTnm:
 			orderComplete.Signature = createUniqueSignature()
+			orderComplete.SourceID = localID
 			for i := 0; i < packetDuplicates; i++ {
 				channels.OrderCompleteTX <- orderComplete
 			}
@@ -190,7 +191,7 @@ func receiver(port int) {
 				channels.CostRequestFnmTom <- costReq
 			}
 		case costAns := <-channels.CostAnswerRX:
-			if costAns.ArrivalID != localID {
+			if costAns.DestinationID != localID {
 				continue
 			}
 			if addSignature(costAns.Signature) {
@@ -205,6 +206,7 @@ func receiver(port int) {
 			}
 		case orderComplete := <-channels.OrderCompleteRX:
 			if addSignature(orderComplete.Signature) {
+				orderComplete.ArrivalID = localID
 				channels.OrderCompleteFnmTom <- orderComplete
 			}
 		case orderRegistered := <-channels.OrderRegisteredRX:

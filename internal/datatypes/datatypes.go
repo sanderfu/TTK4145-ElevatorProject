@@ -47,10 +47,10 @@ type CostRequest struct {
 }
 
 type CostAnswer struct {
-	Signature string //Used by networkmanager to remove duplicates
-	SourceID  string //ID of answer sender.
-	ArrivalID string //ID of where the answer arrived
-	CostValue int
+	Signature     string //Used by networkmanager to remove duplicates
+	SourceID      string //ID of answer sender.
+	DestinationID string //ID of where the answer arrived
+	CostValue     int
 }
 
 // Order structures
@@ -74,6 +74,8 @@ type OrderRecvAck struct { // order received acknowledgment
 
 type OrderComplete struct {
 	Signature string
+	SourceID  string //ID of answer sender.
+	ArrivalID string //ID of where the answer arrived
 	Floor     int
 	OrderType int
 }
