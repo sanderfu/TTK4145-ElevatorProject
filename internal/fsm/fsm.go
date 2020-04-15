@@ -125,8 +125,7 @@ func doorOpen() {
 
 	// Inform order manager that order was completed on given floor
 	completedOrder := datatypes.OrderComplete{
-		Floor:     currentOrder.Floor,
-		OrderType: currentOrder.OrderType,
+		Floor: lastFloor,
 	}
 	channels.OrderCompleteFfsmTom <- completedOrder
 
