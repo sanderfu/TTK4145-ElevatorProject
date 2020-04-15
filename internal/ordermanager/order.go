@@ -75,6 +75,7 @@ func orderRegistrationHW() {
 				if costAns.CostValue < primaryCost {
 					backupCost = primaryCost
 					primaryCost = costAns.CostValue
+					order.BackupID = order.PrimaryID
 					order.PrimaryID = costAns.SourceID
 				} else if costAns.CostValue < backupCost {
 					backupCost = costAns.CostValue
