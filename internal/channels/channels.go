@@ -47,10 +47,10 @@ var InitDriverTX = make(chan struct{}, 1)
 var InitDriverRX = make(chan struct{}, 1)
 
 // Internal channels for queue modifications
-var PrimaryQueueAppend = make(chan datatypes.QueueOrder, 10)
-var PrimaryQueueRemove = make(chan datatypes.QueueOrder, 10)
-var BackupQueueAppend = make(chan datatypes.QueueOrder, 10)
-var BackupQueueRemove = make(chan datatypes.QueueOrder, 10)
+var PrimaryQueueAppend = make(chan datatypes.QueueOrder, 1)
+var PrimaryQueueRemove = make(chan datatypes.QueueOrder, 1)
+var BackupQueueAppend = make(chan datatypes.QueueOrder, 1)
+var BackupQueueRemove = make(chan datatypes.QueueOrder, 1)
 
 var FloorAndDirectionRequestFomTfsm = make(chan struct{}, 1)
 
