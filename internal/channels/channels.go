@@ -21,6 +21,8 @@ var KillReceiver = make(chan struct{}, 1)
 var InitTransmitter = make(chan struct{}, 1)
 var InitReceiver = make(chan struct{}, 1)
 
+var SWOrderPrimaryFnmTom = make(chan datatypes.Order, 10)
+var SWOrderBackupFnmTom = make(chan datatypes.Order, 10)
 var CostRequestFnmTom = make(chan datatypes.CostRequest, 10)
 var CostAnswerFnmTom = make(chan datatypes.CostAnswer, 10)
 var OrderRecvAckFnmTom = make(chan datatypes.OrderRecvAck, 10)
@@ -31,8 +33,6 @@ var OrderRegisteredFnmTom = make(chan datatypes.OrderRegistered, 10)
 // Order manager channels
 ////////////////////////////////////////////////////////////////////////////////
 
-var SWOrderPrimaryFnmTom = make(chan datatypes.Order, 10)
-var SWOrderBackupFnmTom = make(chan datatypes.Order, 10)
 var SWOrderFomTnm = make(chan datatypes.Order, 10)
 var CostRequestFomTnm = make(chan datatypes.CostRequest, 10)
 var CostAnswerFomTnm = make(chan datatypes.CostAnswer, 10)
@@ -47,10 +47,10 @@ var InitDriverTX = make(chan struct{}, 1)
 var InitDriverRX = make(chan struct{}, 1)
 
 // Internal channels for queue modifications
-var PrimaryQueueAppend = make(chan datatypes.QueueOrder, 1)
-var PrimaryQueueRemove = make(chan datatypes.QueueOrder, 1)
-var BackupQueueAppend = make(chan datatypes.QueueOrder, 1)
-var BackupQueueRemove = make(chan datatypes.QueueOrder, 1)
+var PrimaryQueueAppend = make(chan datatypes.QueueOrder, 10)
+var PrimaryQueueRemove = make(chan datatypes.QueueOrder, 10)
+var BackupQueueAppend = make(chan datatypes.QueueOrder, 10)
+var BackupQueueRemove = make(chan datatypes.QueueOrder, 10)
 
 var FloorAndDirectionRequestFomTfsm = make(chan struct{}, 1)
 
@@ -58,17 +58,17 @@ var FloorAndDirectionRequestFomTfsm = make(chan struct{}, 1)
 // Hardware manager channels
 ////////////////////////////////////////////////////////////////////////////////
 
-var OrderFhmTom = make(chan datatypes.Order, 10)
+var OrderFhmTom = make(chan datatypes.Order, 1)
 var CurrentFloorFhmTfsm = make(chan int, 1)
 var HMInitStatusFhmTfsm = make(chan bool, 1)
-var ClearLightsFomThm = make(chan datatypes.OrderComplete, 10)
-var SetLightsFomThm = make(chan datatypes.OrderRegistered, 10)
+var ClearLightsFomThm = make(chan datatypes.OrderComplete, 1)
+var SetLightsFomThm = make(chan datatypes.OrderRegistered, 1)
 
 ////////////////////////////////////////////////////////////////////////////////
 // FSM channels
 ////////////////////////////////////////////////////////////////////////////////
 
-var OrderCompleteFfsmTom = make(chan datatypes.OrderComplete, 10)
+var OrderCompleteFfsmTom = make(chan datatypes.OrderComplete, 1)
 var FloorFfsmTom = make(chan int, 1)
 var DirectionFfsmTom = make(chan int, 1)
 
