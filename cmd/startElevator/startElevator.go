@@ -8,7 +8,7 @@ import (
 )
 
 func findOpenPort() (int, net.Listener) {
-	connPort := 16698
+	connPort := 15657
 	addr := ":" + strconv.Itoa(connPort)
 	fmt.Println(addr)
 	listener, err := net.Listen("tcp", addr)

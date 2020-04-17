@@ -1,6 +1,7 @@
 package networkmanager
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -74,6 +75,7 @@ func connectionWatchdog() {
 		if err != nil {
 			//Not connected to internet, take action if has not taken action already
 			if mode != datatypes.Localhost {
+				fmt.Println("Disconnected")
 				localID = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
 				channels.KillTransmitter <- struct{}{}
@@ -82,6 +84,7 @@ func connectionWatchdog() {
 		} else {
 			//Connected to internet, take action if has not taken action already
 			if mode != datatypes.Network {
+				fmt.Println("Reconnected")
 				localID = IPAddr + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
 				channels.KillTransmitter <- struct{}{}
