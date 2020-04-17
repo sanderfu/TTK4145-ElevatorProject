@@ -1,6 +1,7 @@
 package networkmanager
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -25,6 +26,8 @@ var localID string // IP address and process ID
 var start time.Time
 var mode datatypes.NWMMode
 
+var broadCastPortLocalhost int
+
 ////////////////////////////////////////////////////////////////////////////////
 // Public function
 ////////////////////////////////////////////////////////////////////////////////
@@ -35,6 +38,8 @@ func NetworkManager() {
 	packetDuplicates = configuration.Config.NetworkPacketDuplicates
 	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
 	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
+
+	broadCastPortLocalhost = 16570
 
 	mode = datatypes.Network
 	localID, _ = localip.LocalIP()
@@ -56,9 +61,17 @@ func NetworkManager() {
 	for {
 		select {
 		case <-channels.InitTransmitter:
-			go transmitter(broadCastPort)
+			if mode == datatypes.Network {
+				go transmitter(broadCastPort)
+			} else {
+				go transmitter(broadCastPortLocalhost)
+			}
 		case <-channels.InitReceiver:
-			go receiver(broadCastPort)
+			if mode == datatypes.Network {
+				go receiver(broadCastPort)
+			} else {
+				go receiver(broadCastPortLocalhost)
+			}
 		}
 	}
 }
@@ -69,11 +82,14 @@ func NetworkManager() {
 
 func connectionWatchdog() {
 	for {
+		//fmt.Println("Watchdog checking network connection")
 		time.Sleep(1000 * time.Millisecond)
 		IPAddr, err := localip.LocalIP()
+		//fmt.Println("Passed error generation")
 		if err != nil {
 			//Not connected to internet, take action if has not taken action already
 			if mode != datatypes.Localhost {
+				fmt.Println("Switched to localhost mode")
 				localID = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
 				channels.KillTransmitter <- struct{}{}
@@ -117,6 +133,7 @@ func addSignature(signature string) bool {
 
 // Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
+	fmt.Println("Starting transmitter at port ", port)
 	go bcast.Transmitter(port, mode, channels.SWOrderTX, channels.CostRequestTX,
 		channels.CostAnswerTX, channels.OrderRecvAckTX, channels.OrderCompleteTX,
 		channels.OrderRegisteredTX)
@@ -169,6 +186,7 @@ func transmitter(port int) {
 // Function for removing redundant packages such that only unique packages
 // recieved are communicated onwards in the system to the Order Manager
 func receiver(port int) {
+	fmt.Println("Starting reciever at port ", port)
 	go bcast.Receiver(port, channels.SWOrderRX, channels.CostRequestRX,
 		channels.CostAnswerRX, channels.OrderRecvAckRX,
 		channels.OrderCompleteRX, channels.OrderRegisteredRX)
@@ -215,7 +233,9 @@ func receiver(port int) {
 				channels.OrderRegisteredFnmTom <- orderRegistered
 			}
 		case <-channels.KillReceiver:
+			fmt.Println("NetworkManager receiver got message to end its driver and itself")
 			channels.KillDriverRX <- struct{}{}
+			fmt.Println("Done sending message to driver")
 			channels.InitReceiver <- struct{}{}
 			return
 		}
