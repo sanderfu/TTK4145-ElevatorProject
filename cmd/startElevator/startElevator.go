@@ -34,7 +34,7 @@ func getPorts() (string, string) {
 
 func main() {
 
-	watchdogPort, elevatorPort := getPorts()
+	elevatorPort, watchdogPort := getPorts()
 	fmt.Printf("Watchdogport: %v\n elevport: %v\n", watchdogPort, elevatorPort)
 
 	cmdWatchdog := exec.Command("gnome-terminal", "-e", "build/watchdog -watchdogport "+watchdogPort+" -elevport "+elevatorPort)
