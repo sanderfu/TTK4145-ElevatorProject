@@ -6,6 +6,7 @@ import (
 	"net"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
@@ -63,6 +64,7 @@ func Receiver(port int, chans ...interface{}) {
 	var buf [1024]byte
 	conn := conn.DialBroadcastUDP(port)
 	for {
+		conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		select {
 		case <-channels.KillDriverRX:
 			channels.InitDriverRX <- struct{}{}

@@ -13,11 +13,11 @@ import (
 )
 
 const (
-	primaryv1 = "/primaryv1.json"
-	primaryv2 = "/primaryv2.json"
+	primaryv1 = "primaryv1.json"
+	primaryv2 = "primaryv2.json"
 
-	backupv1 = "/backupv1.json"
-	backupv2 = "/backupv2.json"
+	backupv1 = "backupv1.json"
+	backupv2 = "backupv2.json"
 
 	assetDir = "./assets/"
 
@@ -138,7 +138,7 @@ func sendOrderRecvAck(queueOrder datatypes.QueueOrder) {
 func restoreQueues(lastPID string) {
 	if lastPID != "NONE" {
 		fmt.Println("Importing queue from crashed session")
-		dir := "/" + lastPID
+		dir := lastPID
 		loadQueue(&primaryQueue, true, dir)
 		loadQueue(&backupQueue, false, dir)
 		var orderReg datatypes.OrderRegistered

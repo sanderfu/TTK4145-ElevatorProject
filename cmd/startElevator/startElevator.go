@@ -8,7 +8,7 @@ import (
 )
 
 func findOpenPort() (int, net.Listener) {
-	connPort := 16698
+	connPort := 15657
 	addr := ":" + strconv.Itoa(connPort)
 	fmt.Println(addr)
 	listener, err := net.Listen("tcp", addr)
@@ -34,7 +34,7 @@ func getPorts() (string, string) {
 
 func main() {
 
-	watchdogPort, elevatorPort := getPorts()
+	elevatorPort, watchdogPort := getPorts()
 	fmt.Printf("Watchdogport: %v\n elevport: %v\n", watchdogPort, elevatorPort)
 
 	cmdWatchdog := exec.Command("gnome-terminal", "-e", "build/watchdog -watchdogport "+watchdogPort+" -elevport "+elevatorPort)
