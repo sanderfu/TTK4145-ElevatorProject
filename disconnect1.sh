@@ -13,12 +13,12 @@ sudo iptables -A INPUT -p tcp --dport 15660 -j ACCEPT
 sudo iptables -A INPUT -p tcp --sport 15660 -j ACCEPT
 
 #Localhost port for elevator 1 to talk to itself
-sudo iptables -A INPUT -p udp --dport 15661 -j ACCEPT
-sudo iptables -A INPUT -p udp --sport 15661 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 16570 -j ACCEPT
+sudo iptables -A INPUT -p udp --sport 16570 -j ACCEPT
 
 #Localhost port for elevator 2 to talk to itself
-sudo iptables -A INPUT -p udp --dport 15662 -j ACCEPT
-sudo iptables -A INPUT -p udp --sport 15662 -j ACCEPT
+sudo iptables -A INPUT -p udp --dport 16571 -j ACCEPT
+sudo iptables -A INPUT -p udp --sport 16571 -j ACCEPT
 
 #Drop all other network connections
 sudo iptables -A INPUT -j DROP

@@ -39,7 +39,12 @@ func NetworkManager() {
 	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
 	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
 
-	broadCastPortLocalhost = 16570
+	//This part is specifically to work with the emulated network loss from the
+	//new validation criteria
+	fmt.Println("Select port for localhost (16570 or 16571): ")
+	fmt.Scan(&broadCastPortLocalhost)
+	fmt.Println("Will use ", broadCastPortLocalhost, " as port in the localhost mode")
+	//
 
 	mode = datatypes.Network
 	localID, _ = localip.LocalIP()
