@@ -44,7 +44,6 @@ func NetworkManager() {
 	fmt.Println("Select port for localhost (16570 or 16571): ")
 	fmt.Scan(&broadCastPortLocalhost)
 	fmt.Println("Will use ", broadCastPortLocalhost, " as port in the localhost mode")
-	//
 
 	mode = datatypes.Network
 	localID, _ = localip.LocalIP()
@@ -87,10 +86,8 @@ func NetworkManager() {
 
 func connectionWatchdog() {
 	for {
-		//fmt.Println("Watchdog checking network connection")
 		time.Sleep(1000 * time.Millisecond)
 		IPAddr, err := localip.LocalIP()
-		//fmt.Println("Passed error generation")
 		if err != nil {
 			//Not connected to internet, take action if has not taken action already
 			if mode != datatypes.Localhost {
