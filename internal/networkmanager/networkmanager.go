@@ -1,6 +1,7 @@
 package networkmanager
 
 import (
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -25,16 +26,27 @@ var localID string // IP address and process ID
 var start time.Time
 var mode datatypes.NWMMode
 
+var localport int
+
 ////////////////////////////////////////////////////////////////////////////////
 // Public function
 ////////////////////////////////////////////////////////////////////////////////
 
-func NetworkManager() {
+func NetworkManager(bcastlocalport string) {
 	// Get parameters from config
 	broadCastPort = configuration.Config.BroadcastPort
 	packetDuplicates = configuration.Config.NetworkPacketDuplicates
 	maxUniqueSignatures = configuration.Config.MaxUniqueSignatures
 	removePercent = configuration.Config.UniqueSignatureRemovalPercentage
+
+	//This part is specifically to work with the emulated network loss from the
+	//new validation criteria
+	if bcastlocalport == "NONE" {
+		localport = broadCastPort
+	} else {
+		localport, _ = strconv.Atoi(bcastlocalport)
+	}
+	fmt.Println("Port for localhost mode is: ", localport)
 
 	mode = datatypes.Network
 	localID, _ = localip.LocalIP()
@@ -56,9 +68,17 @@ func NetworkManager() {
 	for {
 		select {
 		case <-channels.InitTransmitter:
-			go transmitter(broadCastPort)
+			if mode == datatypes.Network {
+				go transmitter(broadCastPort)
+			} else {
+				go transmitter(localport)
+			}
 		case <-channels.InitReceiver:
-			go receiver(broadCastPort)
+			if mode == datatypes.Network {
+				go receiver(broadCastPort)
+			} else {
+				go receiver(localport)
+			}
 		}
 	}
 }
@@ -74,6 +94,7 @@ func connectionWatchdog() {
 		if err != nil {
 			//Not connected to internet, take action if has not taken action already
 			if mode != datatypes.Localhost {
+				fmt.Println("Switched to localhost mode")
 				localID = "LOCALHOST" + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Localhost
 				channels.KillTransmitter <- struct{}{}
@@ -82,6 +103,7 @@ func connectionWatchdog() {
 		} else {
 			//Connected to internet, take action if has not taken action already
 			if mode != datatypes.Network {
+				fmt.Println("Reconnected to network")
 				localID = IPAddr + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
 				channels.KillTransmitter <- struct{}{}

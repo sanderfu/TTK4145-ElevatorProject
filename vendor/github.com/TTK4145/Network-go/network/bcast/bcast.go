@@ -6,6 +6,7 @@ import (
 	"net"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/channels"
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/datatypes"
@@ -43,6 +44,7 @@ func Transmitter(port int, mode datatypes.NWMMode, chans ...interface{}) {
 	for {
 		select {
 		case <-channels.KillDriverTX:
+			conn.Close()
 			channels.InitDriverTX <- struct{}{}
 			return
 		default:
@@ -62,24 +64,27 @@ func Receiver(port int, chans ...interface{}) {
 	var buf [1024]byte
 	conn := conn.DialBroadcastUDP(port)
 	for {
+		conn.SetReadDeadline(time.Now().Add(10 * time.Millisecond))
 		select {
 		case <-channels.KillDriverRX:
 			channels.InitDriverRX <- struct{}{}
 			return
 		default:
-			n, _, _ := conn.ReadFrom(buf[0:])
-			for _, ch := range chans {
-				T := reflect.TypeOf(ch).Elem()
-				typeName := T.String()
-				if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
-					v := reflect.New(T)
-					json.Unmarshal(buf[len(typeName):n], v.Interface())
+			{
+				n, _, _ := conn.ReadFrom(buf[0:])
+				for _, ch := range chans {
+					T := reflect.TypeOf(ch).Elem()
+					typeName := T.String()
+					if strings.HasPrefix(string(buf[0:n])+"{", typeName) {
+						v := reflect.New(T)
+						json.Unmarshal(buf[len(typeName):n], v.Interface())
 
-					reflect.Select([]reflect.SelectCase{{
-						Dir:  reflect.SelectSend,
-						Chan: reflect.ValueOf(ch),
-						Send: reflect.Indirect(v),
-					}})
+						reflect.Select([]reflect.SelectCase{{
+							Dir:  reflect.SelectSend,
+							Chan: reflect.ValueOf(ch),
+							Send: reflect.Indirect(v),
+						}})
+					}
 				}
 			}
 		}

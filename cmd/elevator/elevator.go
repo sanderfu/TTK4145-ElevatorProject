@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"fmt"
 
 	"github.com/sanderfu/TTK4145-ElevatorProject/internal/configuration"
@@ -15,15 +14,13 @@ import (
 func main() {
 
 	fmt.Println("Starting elevator")
-
 	// initialize system parameters
 	configuration.ParseFlags()
 	configuration.ReadConfig("./config.json")
-
 	// start managers
 	go watchdog.ElevatorNode(configuration.Flags.WatchdogPort)
 
-	go networkmanager.NetworkManager()
+	go networkmanager.NetworkManager(configuration.Flags.BcastLocalPort)
 
 	go ordermanager.OrderManager()
 
