@@ -137,7 +137,6 @@ func sendOrderRecvAck(queueOrder datatypes.QueueOrder) {
 
 func restoreQueues(lastPID string) {
 	if lastPID != "NONE" {
-		fmt.Println("Importing queue from crashed session")
 		dir := lastPID
 		loadQueue(&primaryQueue, true, dir)
 		loadQueue(&backupQueue, false, dir)
@@ -157,7 +156,7 @@ func restoreQueues(lastPID string) {
 
 func saveQueue(queue []datatypes.QueueOrder, primary bool) {
 	pid := strconv.Itoa(os.Getpid())
-	processAssetsDir := assetDir + pid
+	processAssetsDir := assetDir + pid + "/"
 
 	result, err := json.MarshalIndent(queue, "", "")
 	if err != nil {
@@ -190,7 +189,7 @@ func loadQueue(queue *[]datatypes.QueueOrder, primary bool, pid string) {
 }
 
 func selectFileNames(primary bool, pid string) (string, string) {
-	processAssetsDir := assetDir + pid
+	processAssetsDir := assetDir + pid + "/"
 
 	if primary {
 		if fileExists(processAssetsDir, primaryv1) {
