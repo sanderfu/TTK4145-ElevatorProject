@@ -26,13 +26,13 @@ var localID string // IP address and process ID
 var start time.Time
 var mode datatypes.NWMMode
 
-var broadCastPortLocalhost int
+var localport int
 
 ////////////////////////////////////////////////////////////////////////////////
 // Public function
 ////////////////////////////////////////////////////////////////////////////////
 
-func NetworkManager() {
+func NetworkManager(bcastlocalport string) {
 	// Get parameters from config
 	broadCastPort = configuration.Config.BroadcastPort
 	packetDuplicates = configuration.Config.NetworkPacketDuplicates
@@ -41,9 +41,12 @@ func NetworkManager() {
 
 	//This part is specifically to work with the emulated network loss from the
 	//new validation criteria
-	fmt.Println("Select port for localhost (16570 or 16571): ")
-	fmt.Scan(&broadCastPortLocalhost)
-	fmt.Println("Will use ", broadCastPortLocalhost, " as port in the localhost mode")
+	if bcastlocalport == "NONE" {
+		localport = broadCastPort
+	} else {
+		localport, _ = strconv.Atoi(bcastlocalport)
+	}
+	fmt.Println("Port for localhost mode is: ", localport)
 
 	mode = datatypes.Network
 	localID, _ = localip.LocalIP()
@@ -68,13 +71,13 @@ func NetworkManager() {
 			if mode == datatypes.Network {
 				go transmitter(broadCastPort)
 			} else {
-				go transmitter(broadCastPortLocalhost)
+				go transmitter(localport)
 			}
 		case <-channels.InitReceiver:
 			if mode == datatypes.Network {
 				go receiver(broadCastPort)
 			} else {
-				go receiver(broadCastPortLocalhost)
+				go receiver(localport)
 			}
 		}
 	}

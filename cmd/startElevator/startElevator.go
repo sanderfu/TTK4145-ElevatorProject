@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"os/exec"
@@ -34,16 +35,24 @@ func getPorts() (string, string) {
 
 func main() {
 
+	// Get a separate broadcast port for local host. This is because of the
+	// testing criteria
+	localhostBroadcastPortPtr := flag.String("bcastlocalport", "NONE", "Port for local host broadcast")
+	flag.Parse()
+	fmt.Println(*localhostBroadcastPortPtr)
+
 	elevatorPort, watchdogPort := getPorts()
 	fmt.Printf("Watchdogport: %v\n elevport: %v\n", watchdogPort, elevatorPort)
 
-	cmdWatchdog := exec.Command("gnome-terminal", "-e", "build/watchdog -watchdogport "+watchdogPort+" -elevport "+elevatorPort)
+	cmdWatchdog := exec.Command("gnome-terminal", "-e", "build/watchdog -watchdogport "+
+		watchdogPort+" -elevport "+elevatorPort+" -bcastlocalport "+*localhostBroadcastPortPtr)
 	cmdWatchdog.Run()
 
 	cmdElevatorHardware := exec.Command("gnome-terminal", "-e", "./SimElevatorServer --port "+elevatorPort)
 	cmdElevatorHardware.Run()
 
-	cmdElevatorSoftware := exec.Command("gnome-terminal", "-e", "build/elevator -elevport "+elevatorPort+" -watchdogport "+watchdogPort)
+	cmdElevatorSoftware := exec.Command("gnome-terminal", "-e", "build/elevator -elevport "+
+		elevatorPort+" -watchdogport "+watchdogPort+" -bcastlocalport "+*localhostBroadcastPortPtr)
 	cmdElevatorSoftware.Run()
 
 }

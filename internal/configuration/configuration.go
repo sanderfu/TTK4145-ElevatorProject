@@ -23,9 +23,10 @@ type Configuration struct {
 }
 
 type CommandLineFlags struct {
-	ElevatorPort string
-	WatchdogPort string
-	LastPID      string
+	ElevatorPort   string
+	WatchdogPort   string
+	LastPID        string
+	BcastLocalPort string
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -67,11 +68,12 @@ func ParseFlags() {
 	elevPortPtr := flag.String("elevport", "", "elevator server port (mandatory)")
 	watchdogPortPtr := flag.String("watchdogport", "", "watchdog port (mandatory)")
 	lastPIDPtr := flag.String("lastpid", "NONE", "process ID of last running program")
-
+	bcastlocalPortPtr := flag.String("bcastlocalport", "NONE", "Port for local host broadcast")
 	flag.Parse()
 
 	// Load flags into global variable
 	Flags.ElevatorPort = *elevPortPtr
 	Flags.WatchdogPort = *watchdogPortPtr
 	Flags.LastPID = *lastPIDPtr
+	Flags.BcastLocalPort = *bcastlocalPortPtr
 }

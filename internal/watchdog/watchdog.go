@@ -27,7 +27,7 @@ const (
 // Public functions
 ////////////////////////////////////////////////////////////////////////////////
 
-func WatchdogNode(watchdogport string, elevport string) {
+func WatchdogNode(watchdogport string, elevport string, bcastlocalport string) {
 	fmt.Println("Starting watchdog")
 	listener, conn := initWatchdogNode(watchdogport)
 	bytebuffer := make([]byte, 500)
@@ -36,7 +36,7 @@ func WatchdogNode(watchdogport string, elevport string) {
 	msg.Timestamp = time.Now()
 	latestMessage = *msg
 
-	go watchdogTimeoutHandler(watchdogport, elevport)
+	go watchdogTimeoutHandler(watchdogport, elevport, bcastlocalport)
 
 	for {
 		_, err := conn.Read(bytebuffer)
@@ -98,12 +98,12 @@ func initWatchdogNode(watchdogport string) (net.Listener, net.Conn) {
 	return listener, conn
 }
 
-func watchdogTimeoutHandler(watchdogport string, elevport string) {
+func watchdogTimeoutHandler(watchdogport string, elevport string, bcastlocalport string) {
 	for {
 		if time.Since(latestMessage.Timestamp).Nanoseconds()/1e6 > timeoutMS {
 			fmt.Println(time.Since(latestMessage.Timestamp).String())
 			fmt.Println("The ElevatorNode is not responding!")
-			command := "build/elevator -lastpid " + strconv.Itoa(latestMessage.PID) + " -elevport " + elevport + " -watchdogport " + watchdogport
+			command := "build/elevator -lastpid " + strconv.Itoa(latestMessage.PID) + " -elevport " + elevport + " -watchdogport " + watchdogport + " -bcastlocalport " + bcastlocalport
 			fmt.Println("Restarting software: ", command)
 			cmd := exec.Command("gnome-terminal", "-e", command)
 			cmd.Run()
