@@ -15,6 +15,10 @@ system
 * `make clean` deletes all executables in `build` folder and the entire `assets` 
 folder.
 
+**To run the program using the elevator simulator and simulating packet loss, 
+use the `runElev.sh` script and specify a broadcast port for localhost 
+communication internally on one elevator.**
+
 The project includes three executables in `build`, namely `elevator`, `watchdog`
 and `startElevator` where the functionality of each program is
 
