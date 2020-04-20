@@ -2,7 +2,7 @@
 
 ## Usage
 
-This is a *Makefile* project which exists of three different programs, combining
+This is a *Makefile* project which consits of three different programs, combining
 to form the complete system. The usage of the Makefile is the following is 
 the following
 
@@ -23,6 +23,10 @@ and `startElevator` where the functionality of each program is
 if it crashes
 * `startElevator` a start up program which makes sure that both the `elevator`
 and `watchdog` programs are started correctly
+
+**NB: In order for the compilation to work, the project must be stored in a file
+system like this: 
+`/home/<username>/go/src/github.com/sanderfu/TTK4145-ElevatorProject`.**
 
 ## Overview
 

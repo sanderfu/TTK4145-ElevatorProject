@@ -103,7 +103,7 @@ func connectionWatchdog() {
 		} else {
 			//Connected to internet, take action if has not taken action already
 			if mode != datatypes.Network {
-				fmt.Println("Reconnected")
+				fmt.Println("Reconnected to network")
 				localID = IPAddr + ":" + strconv.Itoa(os.Getpid())
 				mode = datatypes.Network
 				channels.KillTransmitter <- struct{}{}
@@ -139,7 +139,6 @@ func addSignature(signature string) bool {
 
 // Function for applying packet redundancy before transmitting over network.
 func transmitter(port int) {
-	fmt.Println("Starting transmitter at port ", port)
 	go bcast.Transmitter(port, mode, channels.SWOrderTX, channels.CostRequestTX,
 		channels.CostAnswerTX, channels.OrderRecvAckTX, channels.OrderCompleteTX,
 		channels.OrderRegisteredTX)
@@ -192,7 +191,6 @@ func transmitter(port int) {
 // Function for removing redundant packages such that only unique packages
 // recieved are communicated onwards in the system to the Order Manager
 func receiver(port int) {
-	fmt.Println("Starting reciever at port ", port)
 	go bcast.Receiver(port, channels.SWOrderRX, channels.CostRequestRX,
 		channels.CostAnswerRX, channels.OrderRecvAckRX,
 		channels.OrderCompleteRX, channels.OrderRegisteredRX)
@@ -239,9 +237,7 @@ func receiver(port int) {
 				channels.OrderRegisteredFnmTom <- orderRegistered
 			}
 		case <-channels.KillReceiver:
-			fmt.Println("NetworkManager receiver got message to end its driver and itself")
 			channels.KillDriverRX <- struct{}{}
-			fmt.Println("Done sending message to driver")
 			channels.InitReceiver <- struct{}{}
 			return
 		}
